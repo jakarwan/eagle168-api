@@ -98,7 +98,7 @@ app.use("/api/admin/get-number-buy", numberBuy);
 //   });
 // });
 
-const port = process.env.PORT || 3035;
+const port = process.env.PORT || 3040;
 
 app.listen(port, () => {
   console.log("Start server at port " + port);

@@ -9,9 +9,9 @@ const connection = mysql.createConnection({
 
   host: "127.0.0.1",
   user: "root",
-  // password: "26153220.Bb",
-  password: "",
-  database: "demo_lotto",
+  password: "26153220.Bb",
+  // password: "",
+  database: "eagle168",
   // timezone: "Asia/Bangkok",
   charset: "utf8",
   
