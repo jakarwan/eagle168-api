@@ -6,15 +6,26 @@ const jwt = require("jsonwebtoken");
 const verifyToken = require("../routes/verifyToken");
 const paginatedResults = require("../routes/pagination");
 const moment = require("moment");
+const { refundLossQuery, getPhoneQuery } = require("../routes/sql/refundLoss");
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   // jwt.verify(req.token, "secretkey", (err, data) => {
-  var sql =
-    "SELECT SUM(p.total) as pay_total, SUM(pl.total) as prize_total, SUM(p.total - pl.total) as total FROM poy as p LEFT JOIN prize_log as pl ON p.created_by = pl.created_by WHERE p.date_lotto = curdate() AND pl.lotto_date = curdate();";
-  connection.query(sql, [], (error, result, fields) => {
-    if (error) return console.log(error);
-    return res.status(200).send({ status: true, data: result });
-  });
+  // if (!err) {
+  var phone = req.query.phone;
+  var startDate = req.query.startDate;
+  var endDate = req.query.endDate;
+  if (phone != null && startDate != null && endDate != null) {
+    var paramsPhone = [phone];
+    const getPhone = await getPhoneQuery(paramsPhone);
+    if (getPhone) {
+      console.log(getPhone, "getPhone");
+      var params = [getPhone[0].id, startDate, endDate];
+      const refundLoss = await refundLossQuery(params);
+      return res.status(200).send({ status: true, data: refundLoss });
+    }
+  } else {
+    return res.status(400).send({ status: false, msg: "กรุณาส่งข้อมูลผู้ใช้ startDate, endDate" });
+  }
 });
 
 module.exports = router;
