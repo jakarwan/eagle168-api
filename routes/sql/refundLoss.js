@@ -16,7 +16,7 @@ async function getPhoneQuery(params) {
 async function refundLossQuery(params) {
   try {
     var sql =
-      `SELECT IFNULL(SUM(p.total), 0) as pay_total, IFNULL(SUM(pl.total), 0) as prize_total, IFNULL(SUM(p.total - pl.total), 0) as total FROM poy as p LEFT JOIN prize_log as pl ON p.created_by = pl.created_by WHERE p.created_by = ? AND p.date_lotto BETWEEN ? AND ?`;
+      `SELECT IFNULL(SUM(p.total), 0) as pay_total, IFNULL(SUM(pl.total), 0) as prize_total, IFNULL(SUM(pl.total - p.total), 0) as total FROM poy as p LEFT JOIN prize_log as pl ON p.created_by = pl.created_by WHERE p.created_by = ? AND p.date_lotto BETWEEN ? AND ?`;
     const rows = await query(sql, params);
     return rows;
   } catch (error) {
