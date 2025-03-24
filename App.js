@@ -24,6 +24,7 @@ const withdrawUser = require("./routes/withdraw");
 const closeNumber = require("./routes/close_number");
 const affiliateUser = require("./routes/affiliate");
 const getLottoHistory = require("./routes/getLottoHistory");
+const refundLoss = require("./routes/refundLoss");
 
 ///////////////// ADMIN ///////////////////////
 const dashboard = require("./routes/admin/dashboard");
@@ -73,6 +74,7 @@ app.use("/api/close-number", closeNumber);
 app.use("/api/affiliate-user", affiliateUser);
 app.use("/api/lotto-history", getLottoHistory);
 app.use("/uploads", express.static("uploads"));
+app.use("/api/refund-loss", refundLoss);
 ///////////////// ADMIN ///////////////////////
 app.use("/api/admin", dashboard);
 app.use("/api/admin/member", member);
