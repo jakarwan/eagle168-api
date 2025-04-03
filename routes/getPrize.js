@@ -95,23 +95,53 @@ router.get("/", (req, res) => {
     } else if (date != undefined) {
       var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
       connection.query(sql, [], (error, resultThai, fields) => {
-        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, lt.active, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL((SELECT p.prize3bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), NULL) AS prize3bottom, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
-        connection.query(sql, [date, date, date, date], (error, result, fields) => {
-          console.log(error);
-          try {
-            if (result === undefined) {
-              return res
-                .status(400)
-                .send({ status: false, data: result, thai: resultThai });
-            } else {
-              return res
-                .status(200)
-                .send({ status: true, data: result, thai: resultThai });
-            }
-          } catch (error) {
+        var sql = `SELECT 
+    lt.lotto_type_id, 
+    lt.type_id, 
+    lt.lotto_type_name, 
+    lt.lotto_type_img, 
+    lt.closing_time, 
+    lt.active, 
+    p.prize_time,
+    COALESCE(p.prize6digit, 'xxxxxx') AS prize6digit,
+    COALESCE(p.prize3bottom, NULL) AS prize3bottom,
+    COALESCE(
+        CASE WHEN p.prize_time <= CURDATE() THEN p.prize3top ELSE 'xxx' END, 'xxx'
+    ) AS prize3top,
+    COALESCE(p.prize2bottom, 'xx') AS prize2bottom
+FROM lotto_type AS lt  
+LEFT JOIN (
+    SELECT p1.* 
+    FROM prize p1  
+    INNER JOIN (
+        SELECT lotto_type_id, MAX(prize_time) AS latest_time  
+        FROM prize  
+        WHERE prize_time <= CURDATE()  
+        GROUP BY lotto_type_id  
+    ) p2 ON p1.lotto_type_id = p2.lotto_type_id AND p1.prize_time = p2.latest_time  
+) AS p ON lt.lotto_type_id = p.lotto_type_id  
+ORDER BY lt.closing_time ASC;
+`;
+        connection.query(
+          sql,
+          [date, date, date, date],
+          (error, result, fields) => {
             console.log(error);
+            try {
+              if (result === undefined) {
+                return res
+                  .status(400)
+                  .send({ status: false, data: result, thai: resultThai });
+              } else {
+                return res
+                  .status(200)
+                  .send({ status: true, data: result, thai: resultThai });
+              }
+            } catch (error) {
+              console.log(error);
+            }
           }
-        });
+        );
       });
     } else {
       return res
@@ -595,7 +625,10 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 JSON.parse(resultPrize[0].prize3bottom).find(
                                   (item) => item.prize3front
                                 )?.prize3front || [];
-                              if (item.number === prize3front[0] || item.number === prize3front[1]) {
+                              if (
+                                item.number === prize3front[0] ||
+                                item.number === prize3front[1]
+                              ) {
                                 connection.query(
                                   sqlUpdate,
                                   [item.lotto_number_id],
@@ -640,8 +673,11 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 JSON.parse(resultPrize[0].prize3bottom).find(
                                   (item) => item.prize3after
                                 )?.prize3after || [];
-                                console.log(prize3after,'prize3after')
-                              if (item.number === prize3after[0] || item.number === prize3after[1]) {
+                              console.log(prize3after, "prize3after");
+                              if (
+                                item.number === prize3after[0] ||
+                                item.number === prize3after[1]
+                              ) {
                                 connection.query(
                                   sqlUpdate,
                                   [item.lotto_number_id],
