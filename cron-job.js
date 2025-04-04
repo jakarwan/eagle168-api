@@ -14,11 +14,8 @@ function dateChange(d) {
 
 cron.schedule(JOB_SCHEDULE, async () => {
   var sql =
-    "UPDATE lotto_type SET closing_time = DATE_ADD(closing_time, INTERVAL 1 DAY) WHERE type_id != 2";
+    "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
   connection.query(sql, (error, result, fields) => {
-    var sql =
-      "UPDATE lotto_type SET open = 1 WHERE type_id != 2";
-    connection.query(sql, (error, result, fields) => {});
     console.log("Update lotto closing time after 02.00");
   });
 
@@ -660,10 +657,10 @@ async function getPrize() {
                                       });
                                     }
                                   );
-                                  lottoNotify(
-                                    rs.lotto_type_name,
-                                    resultPrize[0]
-                                  );
+                                  // lottoNotify(
+                                  //   rs.lotto_type_name,
+                                  //   resultPrize[0]
+                                  // );
                                   console.log(
                                     `อัพเดทออกผลหวย ${rs.lotto_type_name} สำเร็จ`
                                   );
