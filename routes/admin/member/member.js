@@ -134,15 +134,15 @@ router.put("/dis-credit", verifyToken, (req, res) => {
     if (!err) {
       if (data.user.role === "SADMIN") {
         //   var d = moment(new Date()).format("YYYY-MM-DD");
-        var phone = req.body.phone;
+        var id = req.body.id;
         var amount = req.body.amount;
         var type = req.body.type;
         var note = req.body.note;
-        if (phone != null && amount != null && type != null) {
+        if (id != null && amount != null && type != null) {
           if (!isNaN(amount)) {
             if (parseFloat(amount) > 0) {
-              var sql = "SELECT * FROM member WHERE phone = ?";
-              connection.query(sql, [phone], (error, resultMember, fields) => {
+              var sql = "SELECT * FROM member WHERE id = ?";
+              connection.query(sql, [id], (error, resultMember, fields) => {
                 if (resultMember != "") {
                   if (
                     parseFloat(resultMember[0].credit_balance) >=
