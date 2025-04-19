@@ -82,70 +82,91 @@ router.get("/all", verifyToken, (req, res) => {
   });
 });
 
-router.post("/", verifyToken, (req, res) => {
+router.get("/", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
     if (!err) {
-      var number = req.body.number;
-      var lotto_type_id = req.body.lotto_type_id;
-
-      if (number != undefined) {
-        // var sql =
-        //   "SELECT number, type, buy_limit, pay FROM close_number WHERE lotto_type_id = ?";
+      var lotto_type_id = req.query.lotto_type_id;
+      if (lotto_type_id != null) {
         var sql =
           "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
-          const arr = [];
-          const openNumberArr = [];
-          if (result != "") {
-            number.forEach((item) => {
-              result.forEach((el) => {
-                if (el.type == "3 ตัวโต๊ด") {
-                  let result6back = func6back(el.number);
-                  if (result6back.indexOf(item.number) != -1) {
-                    if (item.selected == el.type) {
-                      arr.push({ number: item.number, type: item.selected });
-                    }
-                  }
-                } else {
-                  if (item.number == el.number && item.selected == el.type) {
-                    // if (el.buy_limit < 1) {
-                    arr.push({
-                      number: item.number,
-                      type: item.selected,
-                      limit: el.buy_limit,
-                      pay: el.pay,
-                    });
-                    // } else {
-                    //   openNumberArr.push({
-                    //     number: item.number,
-                    //     type: item.selected,
-                    //     limit: el.buy_limit,
-                    //   });
-                    // }
-                  }
-                }
-              });
-            });
-            return res.status(200).send({
-              status: true,
-              data: arr,
-              // purchasable: openNumberArr,
-              msg: `เลขปิดรับ`,
-            });
-          } else {
-            return res.status(200).send({ status: false, data: result });
-          }
+          return res.status(200).send({ status: true, data: result });
         });
       } else {
         return res
           .status(400)
-          .send({ status: false, msg: "กรุณาส่ง number, lotto_type_id" });
+          .send({ status: false, msg: "กรุณาลือกประเภทหวย" });
       }
     } else {
       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
     }
   });
 });
+
+// router.post("/", verifyToken, (req, res) => {
+//   jwt.verify(req.token, "secretkey", (err, data) => {
+//     if (!err) {
+//       var number = req.body.number;
+//       var lotto_type_id = req.body.lotto_type_id;
+
+//       if (number != undefined) {
+//         // var sql =
+//         //   "SELECT number, type, buy_limit, pay FROM close_number WHERE lotto_type_id = ?";
+//         var sql =
+//           "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
+//         connection.query(sql, [lotto_type_id], (error, result, fields) => {
+//           const arr = [];
+//           const openNumberArr = [];
+//           if (result != "") {
+//             number.forEach((item) => {
+//               result.forEach((el) => {
+//                 if (el.type == "3 ตัวโต๊ด") {
+//                   let result6back = func6back(el.number);
+//                   if (result6back.indexOf(item.number) != -1) {
+//                     if (item.selected == el.type) {
+//                       arr.push({ number: item.number, type: item.selected });
+//                     }
+//                   }
+//                 } else {
+//                   if (item.number == el.number && item.selected == el.type) {
+//                     // if (el.buy_limit < 1) {
+//                     arr.push({
+//                       number: item.number,
+//                       type: item.selected,
+//                       limit: el.buy_limit,
+//                       pay: el.pay,
+//                     });
+//                     // } else {
+//                     //   openNumberArr.push({
+//                     //     number: item.number,
+//                     //     type: item.selected,
+//                     //     limit: el.buy_limit,
+//                     //   });
+//                     // }
+//                   }
+//                 }
+//               });
+//             });
+//             return res.status(200).send({
+//               status: true,
+//               data: arr,
+//               // purchasable: openNumberArr,
+//               msg: `เลขปิดรับ`,
+//             });
+//           } else {
+//             return res.status(200).send({ status: false, data: result });
+//           }
+//         });
+//       } else {
+//         return res
+//           .status(400)
+//           .send({ status: false, msg: "กรุณาส่ง number, lotto_type_id" });
+//       }
+//     } else {
+//       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//     }
+//   });
+// });
 
 router.post("/add-close-number", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
@@ -362,7 +383,19 @@ router.put("/edit-close-number", verifyToken, (req, res) => {
       }
       connection.query(
         sql,
-        [pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, cn_id],
+        [
+          pay,
+          pay2,
+          pay3,
+          pay4,
+          pay5,
+          buy_limit,
+          buy_limit2,
+          buy_limit3,
+          buy_limit4,
+          buy_limit5,
+          cn_id,
+        ],
         (error, result, fields) => {
           return res
             .status(200)
