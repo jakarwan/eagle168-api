@@ -185,7 +185,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
       const buy_limit4 = req.body.buy_limit4;
       const buy_limit5 = req.body.buy_limit5;
       const allNumber = req.body.allNumber;
-      if (lotto_type_id != null && number != null && type != null) {
+      if (lotto_type_id != null && number != null && type != null && type != "") {
         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
           if (result.length > 0) {
