@@ -185,7 +185,12 @@ router.post("/add-close-number", verifyToken, (req, res) => {
       const buy_limit4 = req.body.buy_limit4;
       const buy_limit5 = req.body.buy_limit5;
       const allNumber = req.body.allNumber;
-      if (lotto_type_id != null && number != null && type != null && type != "") {
+      if (
+        lotto_type_id != null &&
+        number != null &&
+        type != null &&
+        type != ""
+      ) {
         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
           if (result.length > 0) {
@@ -225,11 +230,45 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                     (error, result, fields) => {}
                   );
                 }
-              } else {
+              } else if (chkType === "3") {
                 for (i = 0; i < 1000; i++) {
                   if (i < 10) {
                     i = `00${i}`;
                   } else if (i < 100) {
+                    i = `0${i}`;
+                  } else {
+                    i = `${i}`;
+                  }
+                  var sql =
+                    "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                  connection.query(
+                    sql,
+                    [
+                      lotto_type_id,
+                      i,
+                      type,
+                      pay,
+                      pay2,
+                      pay3,
+                      pay4,
+                      pay5,
+                      buy_limit,
+                      buy_limit2,
+                      buy_limit3,
+                      buy_limit4,
+                      buy_limit5,
+                      d,
+                    ],
+                    (error, result, fields) => {}
+                  );
+                }
+              } else {
+                for (i = 0; i < 10000; i++) {
+                  if (i < 10) {
+                    i = `000${i}`;
+                  } else if (i < 100) {
+                    i = `00${i}`;
+                  } else if (i < 1000) {
                     i = `0${i}`;
                   } else {
                     i = `${i}`;
