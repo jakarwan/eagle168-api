@@ -39,7 +39,7 @@ router.get("/all", verifyToken, (req, res) => {
       if (lotto_type_id != null) {
         if (number != null) {
           var sql =
-            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5 buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ? AND number LIKE '%' ? '%'";
+            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5 buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ? AND number = ?";
           connection.query(
             sql,
             [lotto_type_id, number],
