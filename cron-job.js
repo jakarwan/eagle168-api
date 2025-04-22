@@ -921,7 +921,8 @@ async function getPrize() {
                               const [resultPrizeLog] = await connection
                                 .promise()
                                 .query(
-                                  `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
+                                  // `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
+                                  `SELECT lotto_type_id, lotto_date, created_by, total, poy_code FROM prize_log WHERE lotto_date = CURDATE() AND lotto_type_id = ?`,
                                   [queryLottoClose.lotto_type_id]
                                 );
 
