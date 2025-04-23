@@ -231,7 +231,7 @@ router.put("/add-credit", verifyToken, async (req, res) => {
       return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
     }
 
-    conn = await pool.getConnection(); // ใช้ pool
+    conn = await connection.getConnection(); // ใช้ pool
     await conn.beginTransaction(); // เริ่ม transaction
 
     const [resultMember] = await conn.query(
