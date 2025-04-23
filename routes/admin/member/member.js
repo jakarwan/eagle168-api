@@ -231,8 +231,9 @@ router.put("/add-credit", verifyToken, async (req, res) => {
       return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
     }
 
-    conn = await connection.getConnection(); // ใช้ pool
-    await conn.beginTransaction(); // เริ่ม transaction
+    // สร้าง connection และเริ่ม transaction
+    conn = await connection;
+    await conn.beginTransaction();
 
     const [resultMember] = await conn.query(
       "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
@@ -257,14 +258,14 @@ router.put("/add-credit", verifyToken, async (req, res) => {
       phone,
     ]);
 
-    await conn.commit(); // commit
+    await conn.commit();
     res.status(200).json({ status: true, msg: "เติมเครดิตสำเร็จ" });
   } catch (err) {
     console.error(err);
-    if (conn) await conn.rollback(); // rollback ถ้า error
+    if (conn) await conn.rollback();
     res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
   } finally {
-    if (conn) conn.release(); // release connection เสมอ
+    if (conn) await conn.end(); // ปิด connection เมื่อทำงานเสร็จ
   }
 });
 
