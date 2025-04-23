@@ -15,6 +15,9 @@ const connection = mysql.createPool({
   database: "eagle168",
   // timezone: "Asia/Bangkok",
   charset: "utf8",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
   
 });
 module.exports = connection;
