@@ -131,6 +131,63 @@ router.get("/", verifyToken, (req, res) => {
 
 const util = require("util");
 
+router.put("/add-credit", verifyToken, async (req, res) => {
+  let conn;
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+
+    if (decoded.user.role !== "SADMIN") {
+      return res.status(403).json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
+    }
+
+    const { phone, amount, type, note } = req.body;
+
+    if (!phone || !amount || !type) {
+      return res.status(400).json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
+    }
+
+    if (isNaN(amount) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
+    }
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [resultMember] = await conn.query(
+      "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
+      [phone]
+    );
+
+    if (resultMember.length === 0) {
+      await conn.rollback();
+      return res.status(400).json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+    }
+
+    const member = resultMember[0];
+    const newCredit = parseFloat(member.credit_balance) + parseFloat(amount);
+
+    await conn.query(
+      "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [member.phone, amount, type, "MANUAL", note, decoded.user.id, member.id]
+    );
+
+    await conn.query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
+      newCredit,
+      phone,
+    ]);
+
+    await conn.commit();
+    res.status(200).json({ status: true, msg: "เติมเครดิตสำเร็จ" });
+
+  } catch (err) {
+    console.error("Transaction Error:", err);
+    if (conn) await conn.rollback();
+    res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  } finally {
+    if (conn) conn.release(); // คืน connection กลับ pool เสมอ
+  }
+});
+
 // router.put("/add-credit", verifyToken, async (req, res) => {
 //   try {
 //     const decoded = jwt.verify(req.token, "secretkey");
@@ -211,64 +268,6 @@ const util = require("util");
 //       .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
 //   }
 // });
-
-router.put("/add-credit", verifyToken, async (req, res) => {
-  let conn;
-  try {
-    const decoded = jwt.verify(req.token, "secretkey");
-
-    if (decoded.user.role !== "SADMIN") {
-      return res.status(403).json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
-    }
-
-    const { phone, amount, type, note } = req.body;
-
-    if (!phone || !amount || !type) {
-      return res.status(400).json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
-    }
-
-    if (isNaN(amount) || parseFloat(amount) <= 0) {
-      return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
-    }
-
-    // สร้าง connection และเริ่ม transaction
-    conn = await connection;
-    await conn.beginTransaction();
-
-    const [resultMember] = await conn.query(
-      "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
-      [phone]
-    );
-
-    if (resultMember.length === 0) {
-      await conn.rollback();
-      return res.status(400).json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
-    }
-
-    const member = resultMember[0];
-    const newCredit = parseFloat(member.credit_balance) + parseFloat(amount);
-
-    await conn.query(
-      "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [member.phone, amount, type, "MANUAL", note, decoded.user.id, member.id]
-    );
-
-    await conn.query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
-      newCredit,
-      phone,
-    ]);
-
-    await conn.commit();
-    res.status(200).json({ status: true, msg: "เติมเครดิตสำเร็จ" });
-  } catch (err) {
-    console.error(err);
-    if (conn) await conn.rollback();
-    res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
-  } finally {
-    if (conn) await conn.end(); // ปิด connection เมื่อทำงานเสร็จ
-  }
-});
-
 
 router.put("/dis-credit", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
