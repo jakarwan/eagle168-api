@@ -31,8 +31,22 @@ router.get("/", verifyToken, (req, res) => {
       //     }
       //   });
       // } else {
-      var sql =
-        "SELECT p.*, lt.lotto_type_name, (SELECT ROUND(SUM(pay * price)) FROM lotto_number WHERE poy_code = p.poy_code AND status = 'suc') as totalPrize FROM poy as p JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE p.created_by = ? ORDER BY p.created_at DESC";
+      var sql = `SELECT 
+  p.*, 
+  lt.lotto_type_name, 
+  IFNULL(SUM(ln.pay * ln.price), 0) AS totalPrize
+FROM 
+  poy AS p
+JOIN 
+  lotto_type AS lt ON p.lotto_type_id = lt.lotto_type_id
+LEFT JOIN 
+  lotto_number AS ln ON p.poy_code = ln.poy_code AND ln.status = 'suc'
+WHERE 
+  p.created_by = ?
+GROUP BY 
+  p.poy_id
+ORDER BY 
+  p.created_at DESC;`;
       connection.query(sql, [data.user.id], (error, result, fields) => {
         if (result === undefined) {
           return res.status(400).send({ status: false });
