@@ -12,71 +12,70 @@ const {
   maxPlayUpdate,
 } = require("../routes/sql/lottoNumber");
 
-// router.get("/", verifyToken, (req, res) => {
-//   jwt.verify(req.token, "secretkey", (err, data) => {
-//     if (!err) {
-//       //   if (req.query.page && req.query.perPage) {
-//       //   const page = req.query.page;
-//       //   const perPage = req.query.perPage;
-//       const lotto_type_id = req.query.lotto_type_id;
-//       var now = moment(new Date()).format("YYYY-MM-DD");
-//       if (lotto_type_id != null) {
-//         var sql =
-//           "SELECT p.*, lt.lotto_type_name, (SELECT ROUND(SUM(pay * price)) FROM lotto_number WHERE poy_code = p.poy_code AND status = 'suc') as totalPrize FROM poy as p JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.lotto_type_id = ? ORDER BY p.created_at DESC";
-//         connection.query(sql, [lotto_type_id], (error, result, fields) => {
-//           if (result === undefined) {
-//             return res.status(400).send({ status: false });
-//           } else {
-//             return res.status(200).send({ status: true, data: result });
-//           }
-//         });
-//       } else {
-//         var sql =
-//           "SELECT p.*, lt.lotto_type_name, (SELECT ROUND(SUM(pay * price)) FROM lotto_number WHERE poy_code = p.poy_code AND status = 'suc') as totalPrize FROM poy as p JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE p.created_by = ? ORDER BY p.created_at DESC";
-//         connection.query(sql, [data.user.id], (error, result, fields) => {
-//           if (result === undefined) {
-//             return res.status(400).send({ status: false });
-//           } else {
-//             var sql =
-//               "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND created_by = ?";
-//             connection.query(
-//               sql,
-//               [data.user.id],
-//               (error, resultSumTotal, fields) => {
-//                 var sql =
-//                   "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND status_result = 1 AND created_by = ?";
-//                 connection.query(
-//                   sql,
-//                   [data.user.id],
-//                   (error, resultSumResultTrue, fields) => {
-//                     var sql =
-//                       "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND status_result = 0 AND created_by = ?";
-//                     connection.query(
-//                       sql,
-//                       [data.user.id],
-//                       (error, resultSumResultFalse, fields) => {
-//                         return res.status(200).send({
-//                           status: true,
-//                           data: result,
-//                           sum_total: resultSumTotal[0].sum_total,
-//                           resultSumResultTrue: resultSumResultTrue[0].sum_total,
-//                           resultSumResultFalse:
-//                             resultSumResultFalse[0].sum_total,
-//                         });
-//                       }
-//                     );
-//                   }
-//                 );
-//               }
-//             );
-//           }
-//         });
-//       }
-//     } else {
-//       res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
-//     }
-//   });
-// });
+router.get("/", verifyToken, (req, res) => {
+  jwt.verify(req.token, "secretkey", (err, data) => {
+    if (!err) {
+      //   if (req.query.page && req.query.perPage) {
+      //   const page = req.query.page;
+      //   const perPage = req.query.perPage;
+      // const lotto_type_id = req.query.lotto_type_id;
+      var now = moment(new Date()).format("YYYY-MM-DD");
+      // if (lotto_type_id != null) {
+      //   var sql =
+      //     "SELECT p.*, lt.lotto_type_name, (SELECT ROUND(SUM(pay * price)) FROM lotto_number WHERE poy_code = p.poy_code AND status = 'suc') as totalPrize FROM poy as p JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.lotto_type_id = ? ORDER BY p.created_at DESC";
+      //   connection.query(sql, [lotto_type_id], (error, result, fields) => {
+      //     if (result === undefined) {
+      //       return res.status(400).send({ status: false });
+      //     } else {
+      //       return res.status(200).send({ status: true, data: result });
+      //     }
+      //   });
+      // } else {
+      var sql =
+        "SELECT p.*, lt.lotto_type_name, (SELECT ROUND(SUM(pay * price)) FROM lotto_number WHERE poy_code = p.poy_code AND status = 'suc') as totalPrize FROM poy as p JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE p.created_by = ? ORDER BY p.created_at DESC";
+      connection.query(sql, [data.user.id], (error, result, fields) => {
+        if (result === undefined) {
+          return res.status(400).send({ status: false });
+        } else {
+          var sql =
+            "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND created_by = ?";
+          connection.query(
+            sql,
+            [data.user.id],
+            (error, resultSumTotal, fields) => {
+              var sql =
+                "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND status_result = 1 AND created_by = ?";
+              connection.query(
+                sql,
+                [data.user.id],
+                (error, resultSumResultTrue, fields) => {
+                  var sql =
+                    "SELECT IFNULL(SUM(total), 0) as sum_total FROM poy WHERE status = 'SUC' AND status_result = 0 AND created_by = ?";
+                  connection.query(
+                    sql,
+                    [data.user.id],
+                    (error, resultSumResultFalse, fields) => {
+                      return res.status(200).send({
+                        status: true,
+                        data: result,
+                        sum_total: resultSumTotal[0].sum_total,
+                        resultSumResultTrue: resultSumResultTrue[0].sum_total,
+                        resultSumResultFalse: resultSumResultFalse[0].sum_total,
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      });
+      // }
+    } else {
+      res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+  });
+});
 
 router.get("/bill", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
