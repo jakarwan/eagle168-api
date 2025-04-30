@@ -774,7 +774,7 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
     // insert lotto_number
     for (const item of number) {
       await conn.query(
-        "INSERT INTO lotto_number (number, type_option, price, pay, discount, total, lotto_type_id, created_by, poy_code, status, installment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO lotto_number (number, type_option, price, pay, discount, total, lotto_type_id, created_by, poy_code, status, installment_date, date_lotto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())",
         [
           item.number,
           item.selected,
