@@ -16,10 +16,10 @@ router.get("/", verifyToken, async (req, res) => {
         .status(403)
         .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
     }
-    const page = parseInt(req.query.page, 1);
-    const perPage = parseInt(req.query.perPage, 10);
+    const page = parseInt(req.query.page);
+    const perPage = parseInt(req.query.perPage);
     const phone = req.query.phone || "";
-
+    console.log(page,'page')
     if (!page || !perPage) {
       return res
         .status(400)
@@ -82,8 +82,8 @@ router.get("/credit-log", verifyToken, async (req, res) => {
         .status(403)
         .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
     }
-    const page = parseInt(req.query.page, 1);
-    const perPage = parseInt(req.query.perPage, 10);
+    const page = parseInt(req.query.page);
+    const perPage = parseInt(req.query.perPage);
     const phone = req.query.phone || "";
 
     if (!page || !perPage) {
