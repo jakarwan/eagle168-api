@@ -37,6 +37,7 @@ const affiliate = require("./routes/admin/affiliate/affiliate");
 const reportWithdraw = require("./routes/admin/transaction/report-withdraw");
 const poy = require("./routes/admin/poy/poy");
 const numberBuy = require("./routes/admin/numberBuy/numberBuy");
+const prizeLog = require("./routes/admin/transaction/prizeLog.js");
 // const banned = require("./routes/admin/member/bannedUser");
 ///////////////// ADMIN ///////////////////////
 const config = require("./config/config");
@@ -86,6 +87,7 @@ app.use("/api/admin/affiliate", affiliate);
 app.use("/api/admin/report-withdraw", reportWithdraw);
 app.use("/api/admin/poy", poy);
 app.use("/api/admin/get-number-buy", numberBuy);
+app.use("/api/admin/prize-log", prizeLog);
 // app.use("/api/admin/ban-user", banned);
 
 // io.on("connection", function (socket) {
