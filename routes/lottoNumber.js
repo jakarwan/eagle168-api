@@ -840,7 +840,7 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
     // 🧡 Affiliate system (ถ้ามี refs_code)
     if (user.refs_code) {
       const [[refUser]] = await conn.query(
-        "SELECT id, credit_balance FROM member WHERE my_code = ?",
+        "SELECT id, credit_balance FROM member WHERE refs_code = ?",
         [user.refs_code]
       );
 
