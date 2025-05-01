@@ -859,13 +859,13 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
 
         // บันทึกเข้า credit_log ว่าได้ค่าคอม
         await conn.query(
-          `INSERT INTO credit_log (credit_previous, credit_after, created_by, type, note, ref_code, poy_code) 
+          `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, ref_code, poy_code) 
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             refCreditBefore,
             refCreditAfter,
             refUser.id,
-            "affiliate",
+            lotto_type_id,
             `ค่าคอมจากการแทงหวยของ ${user.phone}`,
             user.refs_code,
             billCode,
