@@ -19,7 +19,7 @@ router.get("/", verifyToken, async (req, res) => {
     const page = parseInt(req.query.page);
     const perPage = parseInt(req.query.perPage);
     const phone = req.query.phone || "";
-    console.log(page,'page')
+    console.log(page, "page");
     if (!page || !perPage) {
       return res
         .status(400)
@@ -210,15 +210,52 @@ GROUP BY
       grandDiscount += element.total_discount;
       grandTotalPrize += element.sum_prize;
     });
+    return res.status(200).json({
+      status: true,
+      data: results,
+      grandTotalPrice,
+      grandDiscount,
+      grandTotalPrize,
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.name === "JsonWebTokenError") {
+      return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
     return res
-      .status(200)
-      .json({
-        status: true,
-        data: results,
-        grandTotalPrice,
-        grandDiscount,
-        grandTotalPrize,
-      });
+      .status(500)
+      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  }
+});
+
+router.post("/credit-transfer", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+    const { creditTransfer, note } = req.body;
+
+    if (!creditTransfer || !note) {
+      return res
+        .status(400)
+        .json({ status: false, msg: "กรุณาส่ง creditTransfer, note" });
+    }
+
+    const query = util.promisify(connection.query).bind(connection);
+
+    const [user] = await query(
+      `SELECT credit_balance FROM member WHERE id = ?`,
+      [decoded.user.id]
+    );
+    const creditTransferAfter = user.credit_balance - creditTransfer;
+    const insertCreditLog = await query(
+      `INSERT INTO credit_log (credit_previous, credit_after, created_by, note)
+       VALUES (?, ?, ?, ?)`,
+      [user.credit_balance, creditTransferAfter, decoded.user.id, note]
+    );
+
+    return res.status(200).json({
+      status: true,
+      msg: "โยกเงินสำเร็จ",
+    });
   } catch (err) {
     console.error(err);
     if (err.name === "JsonWebTokenError") {
