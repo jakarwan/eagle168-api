@@ -5,6 +5,7 @@ const connection = require("../../../config/connection");
 const jwt = require("jsonwebtoken");
 const verifyToken = require("../../../routes/verifyToken");
 const paginatedResults = require("../../../routes/pagination");
+const util = require("util");
 
 router.get("/", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
@@ -103,4 +104,34 @@ router.put("/submit", verifyToken, (req, res) => {
     }
   });
 });
+
+router.get("/deposite-withdraw", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+
+    const query = util.promisify(connection.query).bind(connection);
+
+    const deposite = await query(`SELECT * FROM deposite WHERE user_id = ?`, [
+      decoded.user.id,
+    ]);
+
+    const withdraw = await query(`SELECT * FROM withdraw WHERE user_id = ?`, [
+      decoded.user.id,
+    ]);
+
+    return res.status(200).json({
+      status: true,
+      data: { deposite, withdraw },
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.name === "JsonWebTokenError") {
+      return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+    return res
+      .status(500)
+      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  }
+});
+
 module.exports = router;
