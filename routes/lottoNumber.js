@@ -838,42 +838,42 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
     );
 
     // 🧡 Affiliate system (ถ้ามี refs_code)
-    if (user.refs_code) {
-      const [[refUser]] = await conn.query(
-        "SELECT id, credit_balance FROM member WHERE refs_code = ?",
-        [user.refs_code]
-      );
+    // if (user.refs_code) {
+    //   const [[refUser]] = await conn.query(
+    //     "SELECT id, credit_balance FROM member WHERE refs_code = ?",
+    //     [user.refs_code]
+    //   );
 
-      if (refUser) {
-        // คิดคอมมิชชั่น (ตัวอย่างให้ 2%)
-        const affiliatePercent = 2; // เปอร์เซ็นต์
-        const affiliateBonus = (grandTotal * affiliatePercent) / 100;
+    //   if (refUser) {
+    //     // คิดคอมมิชชั่น (ตัวอย่างให้ 2%)
+    //     const affiliatePercent = 2; // เปอร์เซ็นต์
+    //     const affiliateBonus = (grandTotal * affiliatePercent) / 100;
 
-        const refCreditBefore = refUser.credit_balance;
-        const refCreditAfter = refUser.credit_balance + affiliateBonus;
+    //     const refCreditBefore = refUser.credit_balance;
+    //     const refCreditAfter = refUser.credit_balance + affiliateBonus;
 
-        await conn.query("UPDATE member SET credit_balance = ? WHERE id = ?", [
-          refCreditAfter,
-          refUser.id,
-        ]);
+    //     await conn.query("UPDATE member SET credit_balance = ? WHERE id = ?", [
+    //       refCreditAfter,
+    //       refUser.id,
+    //     ]);
 
-        // บันทึกเข้า credit_log ว่าได้ค่าคอม
-        await conn.query(
-          `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            refCreditBefore,
-            refCreditAfter,
-            refUser.id,
-            lotto_type_id,
-            `ค่าคอมจากการแทงหวยของ ${user.phone}`,
-            dateNow,
-            user.refs_code,
-            billCode,
-          ]
-        );
-      }
-    }
+    //     // บันทึกเข้า credit_log ว่าได้ค่าคอม
+    //     await conn.query(
+    //       `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code) 
+    //        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    //       [
+    //         refCreditBefore,
+    //         refCreditAfter,
+    //         refUser.id,
+    //         lotto_type_id,
+    //         `ค่าคอมจากการแทงหวยของ ${user.phone}`,
+    //         dateNow,
+    //         user.refs_code,
+    //         billCode,
+    //       ]
+    //     );
+    //   }
+    // }
 
     await conn.commit();
 
