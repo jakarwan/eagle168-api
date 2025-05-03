@@ -1269,7 +1269,7 @@ async function processLotto(lotto_type_id, prizeDate, el) {
     ]);
 
     const [winners] = await conn.query(
-      `SELECT created_by, SUM(total) AS total, poy_code FROM prize_log WHERE lotto_type_id = ? AND lotto_date = ? GROUP BY created_by`,
+      `SELECT created_by, SUM(total) AS total, MAX(poy_code) AS poy_code FROM prize_log WHERE lotto_type_id = ? AND lotto_date = ? GROUP BY created_by`,
       [lotto_type_id, prizeDate]
     );
 
