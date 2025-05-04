@@ -7,37 +7,29 @@ const axios = require("axios");
 const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
 
 // cron job reset lotto after 02.00
-cron.schedule(JOB_SCHEDULE, async () => {
-  var sql =
-    "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
-  connection.query(sql, (error, result, fields) => {
-    console.log("Update lotto closing time after 02.00");
-  });
-
-  var params = [50];
-  const resetMaxLimitUsers = await updatePlayLimitMembers(params);
-
-  // var dateTh = moment(new Date()).locale("th").format("dddd");
-  // var sqlQueryCloseDate =
-  //   "SELECT * FROM close_lotto WHERE c_day = ? AND active = 1";
-  // connection.query(sqlQueryCloseDate, [dateTh], (error, result, fields) => {
-  //
-  //   console.log(result);
-  //   if (result != "") {
-  //     result.forEach((item) => {
-  //       var sqlCloseDate =
-  //         "UPDATE lotto_type SET open = 0 WHERE lotto_type_id = ?";
-  //       connection.query(
-  //         sqlCloseDate,
-  //         [item.lotto_type_id],
-  //         (error, result, fields) => {
-  //
-  //           console.log("Update lotto closing");
-  //         }
-  //       );
-  //     });
-  //   }
+cron.schedule("0 2 * * *", async () => {
+  // var sql =
+  //   "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
+  // connection.query(sql, (error, result, fields) => {
+  //   console.log("Update lotto closing time after 02.00");
   // });
+
+  // var params = [50];
+  // const resetMaxLimitUsers = await updatePlayLimitMembers(params);
+
+  try {
+    const sql =
+      "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
+
+    await connection.promise().query(sql); // ใช้ .promise() เพื่อ await ได้
+
+    console.log("Update lotto closing time after 02.00");
+
+    const params = [50];
+    await updatePlayLimitMembers(params);
+  } catch (err) {
+    console.error("CRON ERROR:", err);
+  }
 });
 
 // cron job add affiliate today
