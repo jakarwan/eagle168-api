@@ -466,17 +466,23 @@ router.put("/dis-credit", verifyToken, async (req, res) => {
     const decoded = jwt.verify(req.token, "secretkey");
 
     if (decoded.user.role !== "SADMIN") {
-      return res.status(403).json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
+      return res
+        .status(403)
+        .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
     }
 
     const { phone, amount, type, note } = req.body;
 
     if (!phone || !amount || !type) {
-      return res.status(400).json({ status: false, msg: "กรุณาส่ง phone, amount, type" });
+      return res
+        .status(400)
+        .json({ status: false, msg: "กรุณาส่ง phone, amount, type" });
     }
 
     if (isNaN(amount) || parseFloat(amount) <= 0) {
-      return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
+      return res
+        .status(400)
+        .json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
     }
 
     conn = await connection.promise().getConnection();
@@ -489,7 +495,9 @@ router.put("/dis-credit", verifyToken, async (req, res) => {
 
     if (resultMember.length === 0) {
       await conn.rollback();
-      return res.status(400).json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+      return res
+        .status(400)
+        .json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
     }
 
     const member = resultMember[0];
@@ -498,20 +506,31 @@ router.put("/dis-credit", verifyToken, async (req, res) => {
 
     if (currentCredit < disAmount) {
       await conn.rollback();
-      return res.status(400).json({ status: false, msg: "ยอดเครดิตของผู้ใช้นี้ไม่พอ" });
+      return res
+        .status(400)
+        .json({ status: false, msg: "ยอดเครดิตของผู้ใช้นี้ไม่พอ" });
     }
 
     const newCredit = currentCredit - disAmount;
 
     await conn.query(
       "INSERT INTO withdraw (phone, amount, type, type_wd, note, dis_by, user_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [member.phone, disAmount, type, "DIS", note, decoded.user.id, member.id, 1]
+      [
+        member.phone,
+        disAmount,
+        type,
+        "DIS",
+        note,
+        decoded.user.id,
+        member.id,
+        1,
+      ]
     );
 
-    await conn.query(
-      "UPDATE member SET credit_balance = ? WHERE phone = ?",
-      [newCredit, phone]
-    );
+    await conn.query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
+      newCredit,
+      phone,
+    ]);
 
     await conn.query(
       `INSERT INTO credit_log (credit_previous, credit_after, created_by, note)
@@ -529,7 +548,9 @@ router.put("/dis-credit", verifyToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     if (conn) await conn.rollback();
-    return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+    return res
+      .status(500)
+      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
   } finally {
     if (conn) conn.release();
   }
@@ -629,6 +650,36 @@ router.put("/update-aff-user", verifyToken, (req, res) => {
       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
     }
   });
+});
+
+router.get("/deposite-withdraw", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+    const id = req.query.id;
+
+    const query = util.promisify(connection.query).bind(connection);
+
+    const deposite = await query(`SELECT * FROM deposite WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`, [
+      id,
+    ]);
+
+    const withdraw = await query(`SELECT * FROM withdraw WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`, [
+      id,
+    ]);
+
+    return res.status(200).json({
+      status: true,
+      data: { deposite, withdraw },
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.name === "JsonWebTokenError") {
+      return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+    return res
+      .status(500)
+      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  }
 });
 
 module.exports = router;
