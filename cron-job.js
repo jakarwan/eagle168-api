@@ -8,20 +8,18 @@ const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
 
 // cron job reset lotto after 02.00
 cron.schedule("0 2 * * *", async () => {
-  // var sql =
-  //   "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
-  // connection.query(sql, (error, result, fields) => {
-  //   console.log("Update lotto closing time after 02.00");
-  // });
-
-  // var params = [50];
-  // const resetMaxLimitUsers = await updatePlayLimitMembers(params);
-
   try {
-    const sql =
-      "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
+    // const sql =
+    //   "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
 
-    await connection.promise().query(sql); // ใช้ .promise() เพื่อ await ได้
+    // await connection.promise().query(sql); // ใช้ .promise() เพื่อ await ได้
+
+    await connection.promise().query(
+      "UPDATE lotto_type SET open = 1 WHERE type_id != 2"
+    );
+    await connection.promise().query(
+      "UPDATE lotto_type SET closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2"
+    );
 
     console.log("Update lotto closing time after 02.00");
 
