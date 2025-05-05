@@ -288,86 +288,86 @@ router.put("/add-credit", verifyToken, async (req, res) => {
 //   });
 // });
 
-router.put("/add-credit", verifyToken, async (req, res) => {
-  try {
-    const decoded = jwt.verify(req.token, "secretkey");
+// router.put("/add-credit", verifyToken, async (req, res) => {
+//   try {
+//     const decoded = jwt.verify(req.token, "secretkey");
 
-    if (decoded.user.role !== "SADMIN") {
-      return res
-        .status(403)
-        .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
-    }
+//     if (decoded.user.role !== "SADMIN") {
+//       return res
+//         .status(403)
+//         .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
+//     }
 
-    const { phone, amount, type, note } = req.body;
+//     const { phone, amount, type, note } = req.body;
 
-    if (!phone || !amount || !type) {
-      return res
-        .status(400)
-        .json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
-    }
+//     if (!phone || !amount || !type) {
+//       return res
+//         .status(400)
+//         .json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
+//     }
 
-    if (isNaN(amount) || parseFloat(amount) <= 0) {
-      return res.status(400).json({
-        status: false,
-        msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0",
-      });
-    }
+//     if (isNaN(amount) || parseFloat(amount) <= 0) {
+//       return res.status(400).json({
+//         status: false,
+//         msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0",
+//       });
+//     }
 
-    // ใช้ promise wrapper
-    const query = util.promisify(connection.query).bind(connection);
+//     // ใช้ promise wrapper
+//     const query = util.promisify(connection.query).bind(connection);
 
-    // เริ่ม transaction
-    await query("START TRANSACTION");
+//     // เริ่ม transaction
+//     await query("START TRANSACTION");
 
-    const resultMember = await query(
-      "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
-      [phone]
-    );
+//     const resultMember = await query(
+//       "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
+//       [phone]
+//     );
 
-    if (resultMember.length === 0) {
-      await query("ROLLBACK");
-      return res
-        .status(400)
-        .json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
-    }
+//     if (resultMember.length === 0) {
+//       await query("ROLLBACK");
+//       return res
+//         .status(400)
+//         .json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+//     }
 
-    const member = resultMember[0];
-    const newCredit = parseFloat(member.credit_balance) + parseFloat(amount);
+//     const member = resultMember[0];
+//     const newCredit = parseFloat(member.credit_balance) + parseFloat(amount);
 
-    await query(
-      "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [member.phone, amount, type, "MANUAL", note, decoded.user.id, member.id]
-    );
+//     await query(
+//       "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+//       [member.phone, amount, type, "MANUAL", note, decoded.user.id, member.id]
+//     );
 
-    await query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
-      newCredit,
-      phone,
-    ]);
+//     await query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
+//       newCredit,
+//       phone,
+//     ]);
 
-    await query("COMMIT");
+//     await query("COMMIT");
 
-    return res.status(200).json({
-      status: true,
-      msg: "เติมเครดิตสำเร็จ",
-    });
-  } catch (err) {
-    console.error(err);
-    // rollback หากเกิด error
-    try {
-      await util.promisify(connection.query).bind(connection)("ROLLBACK");
-    } catch (rollbackError) {
-      console.error("ROLLBACK error:", rollbackError);
-    }
+//     return res.status(200).json({
+//       status: true,
+//       msg: "เติมเครดิตสำเร็จ",
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     // rollback หากเกิด error
+//     try {
+//       await util.promisify(connection.query).bind(connection)("ROLLBACK");
+//     } catch (rollbackError) {
+//       console.error("ROLLBACK error:", rollbackError);
+//     }
 
-    if (err.name === "JsonWebTokenError") {
-      return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
-    }
+//     if (err.name === "JsonWebTokenError") {
+//       return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//     }
 
-    return res
-      .status(500)
-      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
-  }
-});
+//     return res
+//       .status(500)
+//       .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+//   }
+// });
 
 // router.put("/dis-credit", verifyToken, (req, res) => {
 //   jwt.verify(req.token, "secretkey", (err, data) => {
@@ -460,80 +460,80 @@ router.put("/add-credit", verifyToken, async (req, res) => {
 //   });
 // });
 
-// router.put("/dis-credit", verifyToken, async (req, res) => {
-//   let conn;
-//   try {
-//     const decoded = jwt.verify(req.token, "secretkey");
+router.put("/dis-credit", verifyToken, async (req, res) => {
+  let conn;
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
 
-//     if (decoded.user.role !== "SADMIN") {
-//       return res.status(403).json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
-//     }
+    if (decoded.user.role !== "SADMIN") {
+      return res.status(403).json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
+    }
 
-//     const { phone, amount, type, note } = req.body;
+    const { phone, amount, type, note } = req.body;
 
-//     if (!phone || !amount || !type) {
-//       return res.status(400).json({ status: false, msg: "กรุณาส่ง phone, amount, type" });
-//     }
+    if (!phone || !amount || !type) {
+      return res.status(400).json({ status: false, msg: "กรุณาส่ง phone, amount, type" });
+    }
 
-//     if (isNaN(amount) || parseFloat(amount) <= 0) {
-//       return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
-//     }
+    if (isNaN(amount) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ status: false, msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0" });
+    }
 
-//     conn = await connection.promise().getConnection();
-//     await conn.beginTransaction();
+    conn = await connection.promise().getConnection();
+    await conn.beginTransaction();
 
-//     const [resultMember] = await conn.query(
-//       "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
-//       [phone]
-//     );
+    const [resultMember] = await conn.query(
+      "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
+      [phone]
+    );
 
-//     if (resultMember.length === 0) {
-//       await conn.rollback();
-//       return res.status(400).json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
-//     }
+    if (resultMember.length === 0) {
+      await conn.rollback();
+      return res.status(400).json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+    }
 
-//     const member = resultMember[0];
-//     const currentCredit = parseFloat(member.credit_balance);
-//     const disAmount = parseFloat(amount);
+    const member = resultMember[0];
+    const currentCredit = parseFloat(member.credit_balance);
+    const disAmount = parseFloat(amount);
 
-//     if (currentCredit < disAmount) {
-//       await conn.rollback();
-//       return res.status(400).json({ status: false, msg: "ยอดเครดิตของผู้ใช้นี้ไม่พอ" });
-//     }
+    if (currentCredit < disAmount) {
+      await conn.rollback();
+      return res.status(400).json({ status: false, msg: "ยอดเครดิตของผู้ใช้นี้ไม่พอ" });
+    }
 
-//     const newCredit = currentCredit - disAmount;
+    const newCredit = currentCredit - disAmount;
 
-//     await conn.query(
-//       "INSERT INTO withdraw (phone, amount, type, type_wd, note, dis_by, user_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-//       [member.phone, disAmount, type, "DIS", note, decoded.user.id, member.id, 1]
-//     );
+    await conn.query(
+      "INSERT INTO withdraw (phone, amount, type, type_wd, note, dis_by, user_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [member.phone, disAmount, type, "DIS", note, decoded.user.id, member.id, 1]
+    );
 
-//     await conn.query(
-//       "UPDATE member SET credit_balance = ? WHERE phone = ?",
-//       [newCredit, phone]
-//     );
+    await conn.query(
+      "UPDATE member SET credit_balance = ? WHERE phone = ?",
+      [newCredit, phone]
+    );
 
-//     await conn.query(
-//       `INSERT INTO credit_log (credit_previous, credit_after, created_by, note)
-//        VALUES (?, ?, ?, ?)`,
-//       [
-//         member.credit_balance,
-//         newCredit,
-//         member.id,
-//         `เครดิต -${disAmount} บาท (${type})`,
-//       ]
-//     );
+    await conn.query(
+      `INSERT INTO credit_log (credit_previous, credit_after, created_by, note)
+       VALUES (?, ?, ?, ?)`,
+      [
+        member.credit_balance,
+        newCredit,
+        member.id,
+        `เครดิต -${disAmount} บาท (${type})`,
+      ]
+    );
 
-//     await conn.commit();
-//     return res.status(200).json({ status: true, msg: "ลบเครดิตลูกค้าสำเร็จ" });
-//   } catch (err) {
-//     console.error(err);
-//     if (conn) await conn.rollback();
-//     return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
-//   } finally {
-//     if (conn) conn.release();
-//   }
-// });
+    await conn.commit();
+    return res.status(200).json({ status: true, msg: "ลบเครดิตลูกค้าสำเร็จ" });
+  } catch (err) {
+    console.error(err);
+    if (conn) await conn.rollback();
+    return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
 
 router.put("/ban-user", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, user) => {
