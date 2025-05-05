@@ -657,6 +657,11 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
       return res.status(400).json({ status: false, msg: "หวยนี้ปิดรับแทง" });
     }
 
+    const [lottoTypeOption] = await conn.query(
+      "SELECT * FROM type_options WHERE type_id = ?",
+      [lottoType.type_id]
+    );
+
     const dateNow = moment(lottoType.closing_time).format("YYYY-MM-DD");
 
     const [closeNumbers] = await conn.query(
@@ -773,13 +778,14 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
 
     // insert lotto_number
     for (const item of number) {
+      const [pay] = lottoTypeOption.filter((el) => el.name === item.selected);
       await conn.query(
         "INSERT INTO lotto_number (number, type_option, price, pay, discount, total, lotto_type_id, created_by, poy_code, status, installment_date, date_lotto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())",
         [
           item.number,
           item.selected,
           item.price,
-          item.pay,
+          pay.price,
           item.discount,
           parseFloat(item.price) - parseFloat(item.discount),
           lotto_type_id,
@@ -859,7 +865,7 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
 
     //     // บันทึกเข้า credit_log ว่าได้ค่าคอม
     //     await conn.query(
-    //       `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code) 
+    //       `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code)
     //        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     //       [
     //         refCreditBefore,
