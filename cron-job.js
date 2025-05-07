@@ -7,7 +7,7 @@ const axios = require("axios");
 const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
 
 // cron job reset lotto after 02.00
-cron.schedule("0 2 * * *", async () => {
+cron.schedule("20 13 * * *", async () => {
   try {
     // const sql =
     //   "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
@@ -15,12 +15,13 @@ cron.schedule("0 2 * * *", async () => {
     // await connection.promise().query(sql); // ใช้ .promise() เพื่อ await ได้
 
     await connection.promise().query(
-      "UPDATE lotto_type SET open = 1 WHERE type_id != 2"
-    );
-    await connection.promise().query(
       "UPDATE lotto_type SET closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2"
     );
 
+    await connection.promise().query(
+      "UPDATE lotto_type SET open = 1 WHERE type_id != 2"
+    );
+    
     console.log("Update lotto closing time after 02.00");
 
     const params = [50];
