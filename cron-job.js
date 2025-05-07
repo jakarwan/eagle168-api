@@ -7,7 +7,7 @@ const axios = require("axios");
 const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
 
 // cron job reset lotto after 02.00
-cron.schedule("20 13 * * *", async () => {
+cron.schedule("0 2 * * *", async () => {
   try {
     // const sql =
     //   "UPDATE lotto_type SET open = 1, closing_time = CONCAT(CURDATE(), ' ', TIME(closing_time)) WHERE type_id != 2";
