@@ -348,18 +348,15 @@ async function getPrize() {
     );
     if (!response.data.success) return;
 
-    const [lottoTypes] = await connection.promise().query(
-      `SELECT * FROM lotto_type WHERE open = 0 AND active = 1 AND installment_date = (
-    CASE 
-      WHEN CURTIME() < '06:00:00' THEN DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-      ELSE CURDATE()
-    END
-  )`
-    );
+    const [lottoTypes] = await connection
+      .promise()
+      .query(
+        "SELECT * FROM lotto_type WHERE open = 0 AND active = 1 AND DATE(closing_time) = CURDATE()"
+      );
 
     for (const el of response.data.info) {
       const match = lottoTypes.find((item) => {
-        const closingDate = moment(item.installment_date);
+        const closingDate = moment(item.closing_time);
         const formatted =
           closingDate.format("DD/MM") +
           "/" +
@@ -400,13 +397,13 @@ async function getPrize() {
             el.award1.length === 6 ? el.award1.slice(-3) : el.award1,
             "2 ตัวล่าง",
             el.award2,
-            match.installment_date,
+            match.closing_time,
           ]
         );
         console.log(`[✔] เพิ่มผลหวย ${match.lotto_type_name} ${nowText}`);
       }
 
-      await processLotto(match.lotto_type_id, match.installment_date, el);
+      await processLotto(match.lotto_type_id, today, el);
     }
   } catch (err) {
     console.error("getPrize error:", err);
@@ -432,7 +429,7 @@ async function processLotto(lotto_type_id, prizeDate, el) {
     const [numbers] = await conn.query(
       `SELECT ln.* FROM lotto_number ln
        JOIN lotto_type lt ON ln.lotto_type_id = lt.lotto_type_id
-       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = lt.installment_date`,
+       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time)`,
       [lotto_type_id]
     );
 
