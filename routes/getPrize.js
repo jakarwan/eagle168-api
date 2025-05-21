@@ -93,7 +93,7 @@ router.get("/", (req, res) => {
         );
       });
     } else if (date != undefined) {
-      var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
+      var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 3`;
       connection.query(sql, [], (error, resultThai, fields) => {
         var sql = `SELECT 
     lt.lotto_type_id, 
