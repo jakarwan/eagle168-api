@@ -8,7 +8,7 @@ const paginatedResults = require("../routes/pagination");
 const moment = require("moment");
 const {
   lottoNumberInsert,
-  closeLottoNumberUpdate,
+  // closeLottoNumberUpdate,
   maxPlayUpdate,
 } = require("../routes/sql/lottoNumber");
 
@@ -666,21 +666,18 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
 
     const [closeNumbers] = await conn.query(
       `SELECT cn_id, number, type, 
-        CASE WHEN buy_limit > 0 THEN buy_limit 
-             WHEN buy_limit2 > 0 THEN buy_limit2 
-             WHEN buy_limit3 > 0 THEN buy_limit3 
-             WHEN buy_limit4 > 0 THEN buy_limit4 
-             ELSE buy_limit5 END AS buy_limit,
-        CASE WHEN buy_limit > 0 THEN pay 
-             WHEN buy_limit2 > 0 THEN pay2 
-             WHEN buy_limit3 > 0 THEN pay3 
-             WHEN buy_limit4 > 0 THEN pay4 
-             ELSE pay5 END AS pay,
-        CASE WHEN buy_limit > 0 THEN 1
-             WHEN buy_limit2 > 0 THEN 2 
-             WHEN buy_limit3 > 0 THEN 3
-             WHEN buy_limit4 > 0 THEN 4
-             ELSE 5 END as series
+      remaining_limit,
+      series,
+      pay,
+      pay2,
+      pay3,
+      pay4,
+      pay5,
+      buy_limit,
+      buy_limit2,
+      buy_limit3,
+      buy_limit4,
+      buy_limit5
       FROM close_number 
       WHERE lotto_type_id = ?`,
       [lotto_type_id]
@@ -696,7 +693,8 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
         (c) =>
           c.number == item.number &&
           c.type == item.selected &&
-          (c.buy_limit < item.price || c.pay < 0)
+          c.remaining_limit < item.price &&
+          c.series >= 5
       );
       if (closed) {
         arrClose.push(closed);
@@ -706,7 +704,7 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
         grandTotal += parseFloat(item.price) - parseFloat(item.discount);
       }
     }
-
+    console.log(arrClose, "arrClose");
     if (arrClose.length > 0) {
       await conn.rollback();
       return res.status(400).json({
@@ -801,19 +799,133 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
         (el) => el.number === item.number && el.type === item.selected
       );
 
+      // if (closedItem) {
+      //   let updateField = null;
+      //   let totalLimit = 0;
+
+      //   if (item.price <= closedItem.buy_limit) {
+      //     const series = closedItem.series || 1;
+      //     updateField = series === 1 ? "buy_limit" : `buy_limit${series}`;
+      //     totalLimit = closedItem.buy_limit - parseFloat(item.price);
+
+      //     await conn.query(
+      //       `UPDATE close_number SET ${updateField} = ? WHERE cn_id = ?`,
+      //       [totalLimit, closedItem.cn_id]
+      //     );
+      //   }
+      // }
+
+      // if (closedItem) {
+      //   const series = 1;
+      //   // console.log(closedItem, "closedItem");
+
+      //   // คำนวณ remaining_limit ใหม่
+      //   // const remainingField = "remaining_limit";
+      //   // const currentRemaining =
+      //   //   closedItem.remaining_limit || closedItem.buy_limit; // fallback
+      //   const newRemaining =
+      //     parseFloat(closedItem.remaining_limit) - parseFloat(item.price);
+
+      //   if (newRemaining === 0) {
+      //     series + 1;
+      //     newRemaining = closedItem[`buy_limit${series}`];
+      //   }
+
+      //   await conn.query(
+      //     `UPDATE close_number SET remaining_limit = ? WHERE cn_id = ?`,
+      //     [newRemaining, closedItem.cn_id]
+      //   );
+
+      //   // อัปเดต remaining_pay ด้วยราคาจ่าย ณ series นั้น ๆ
+      //   // const payField = series === 1 ? "pay" : `pay${series}`;
+      //   // const payValue = closedItem[payField] || 0;
+
+      //   await conn.query(
+      //     `UPDATE close_number SET remaining_pay = ? WHERE cn_id = ?`,
+      //     [series, closedItem.cn_id]
+      //   );
+      // }
+
+      // if (closedItem) {
+      //   let series = closedItem.series || 1;
+      //   let currentRemaining = parseFloat(closedItem.remaining_limit || 0);
+      //   let priceToBuy = parseFloat(item.price);
+      //   let newRemaining = currentRemaining - priceToBuy;
+
+      //   if (newRemaining >= 0) {
+      //     // ยังอยู่ใน series เดิม
+      //     // const payField =
+      //     //   series === 1 ? closedItem.pay : closedItem[`pay${series}`] || 0;
+
+      //     await conn.query(
+      //       `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+      //       [newRemaining, series, closedItem.cn_id]
+      //     );
+      //   } else {
+      //     // แทงเกิน series เดิม ต้องเลื่อนไป series ถัดไป
+      //     const nextSeries = (closedItem.series || 1) + 1;
+      //     const nextLimit = parseFloat(
+      //       closedItem[`buy_limit${nextSeries}`] || 0
+      //     );
+      //     const nextPay = parseFloat(closedItem[`pay${nextSeries}`] || 0);
+
+      //     const updatedRemaining = nextLimit - priceToBuy;
+
+      //     await conn.query(
+      //       `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+      //       [updatedRemaining, nextSeries, closedItem.cn_id]
+      //     );
+      //   }
+      // }
+
       if (closedItem) {
-        let updateField = null;
-        let totalLimit = 0;
+        let priceToBuy = parseFloat(item.price);
+        let series = closedItem.series || 1;
+        let canBuy = false;
 
-        if (item.price <= closedItem.buy_limit) {
-          const series = closedItem.series || 1;
-          updateField = series === 1 ? "buy_limit" : `buy_limit${series}`;
-          totalLimit = closedItem.buy_limit - parseFloat(item.price);
+        while (series <= 5) {
+          const remainingLimit = parseFloat(closedItem.remaining_limit || 0);
 
-          await conn.query(
-            `UPDATE close_number SET ${updateField} = ? WHERE cn_id = ?`,
-            [totalLimit, closedItem.cn_id]
-          );
+          if (remainingLimit >= priceToBuy) {
+            // ซื้อได้ภายในลิมิตของ series ปัจจุบัน
+            const newRemaining = remainingLimit - priceToBuy;
+            await conn.query(
+              `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+              [newRemaining, series, closedItem.cn_id]
+            );
+            canBuy = true;
+            break;
+          } else if (remainingLimit === 0 && series < 5) {
+            // ขยับไป series ถัดไป (เฉพาะกรณีลิมิต = 0 เท่านั้น)
+            series++;
+            const nextLimit = parseFloat(closedItem[`buy_limit${series}`] || 0);
+
+            if (nextLimit > 0) {
+              await conn.query(
+                `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+                [nextLimit, series, closedItem.cn_id]
+              );
+              closedItem.remaining_limit = nextLimit;
+              closedItem.series = series;
+              // วน loop ต่อไปเพื่อพิจารณาซื้อ
+              continue;
+            } else {
+              // ไม่มีลิมิตในขั้นถัดไป
+              break;
+            }
+          } else {
+            // มีลิมิต แต่ไม่พอ → ต้องหยุด
+            break;
+          }
+        }
+
+        if (!canBuy) {
+          await conn.rollback();
+          return res.status(400).json({
+            status: false,
+            msg: `แทงเกินลิมิตที่เหลืออยู่ของเลข ${closedItem.number} ${closedItem.type} (${closedItem.remaining_limit} บาท)`,
+            data: [closedItem],
+          });
         }
       }
     }
