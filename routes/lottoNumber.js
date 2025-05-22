@@ -879,55 +879,67 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
       // }
 
       if (closedItem) {
-        let priceToBuy = parseFloat(item.price);
-        let series = closedItem.series || 1;
-        let canBuy = false;
+  let priceToBuy = parseFloat(item.price);
+  let series = closedItem.series || 1;
+  let canBuy = false;
 
-        while (series <= 5) {
-          const remainingLimit = parseFloat(closedItem.remaining_limit || 0);
+  while (series <= 5) {
+    const remainingLimit = parseFloat(closedItem.remaining_limit || 0);
 
-          if (remainingLimit >= priceToBuy) {
-            // ซื้อได้ภายในลิมิตของ series ปัจจุบัน
-            const newRemaining = remainingLimit - priceToBuy;
-            await conn.query(
-              `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-              [newRemaining, series, closedItem.cn_id]
-            );
-            canBuy = true;
-            break;
-          } else if (remainingLimit === 0 && series < 5) {
-            // ขยับไป series ถัดไป (เฉพาะกรณีลิมิต = 0 เท่านั้น)
-            series++;
-            const nextLimit = parseFloat(closedItem[`buy_limit${series}`] || 0);
+    if (remainingLimit >= priceToBuy) {
+      // ซื้อได้ใน series ปัจจุบัน
+      const newRemaining = remainingLimit - priceToBuy;
+      await conn.query(
+        `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+        [newRemaining, series, closedItem.cn_id]
+      );
+      canBuy = true;
+      break;
+    } else if (remainingLimit === 0 && series < 5) {
+      // ไปขั้นถัดไป
+      const nextSeries = series + 1;
+      const nextLimit = parseFloat(closedItem[`buy_limit${nextSeries}`] || 0);
 
-            if (nextLimit > 0) {
-              await conn.query(
-                `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-                [nextLimit, series, closedItem.cn_id]
-              );
-              closedItem.remaining_limit = nextLimit;
-              closedItem.series = series;
-              // วน loop ต่อไปเพื่อพิจารณาซื้อ
-              continue;
-            } else {
-              // ไม่มีลิมิตในขั้นถัดไป
-              break;
-            }
-          } else {
-            // มีลิมิต แต่ไม่พอ → ต้องหยุด
-            break;
-          }
-        }
-
-        if (!canBuy) {
-          await conn.rollback();
-          return res.status(400).json({
-            status: false,
-            msg: `แทงเกินลิมิตที่เหลืออยู่ของเลข ${closedItem.number} ${closedItem.type} (${closedItem.remaining_limit} บาท)`,
-            data: [closedItem],
-          });
-        }
+      if (nextLimit > 0) {
+        // มีลิมิตในขั้นถัดไป → reset remaining_limit แล้ววนต่อ
+        await conn.query(
+          `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+          [nextLimit, nextSeries, closedItem.cn_id]
+        );
+        closedItem.remaining_limit = nextLimit;
+        closedItem.series = nextSeries;
+        series = nextSeries;
+        continue;
+      } else {
+        // ไม่มีลิมิตในขั้นถัดไป → ปิดรับ
+        await conn.rollback();
+        return res.status(400).json({
+          status: false,
+          msg: `เลข ${closedItem.number} ${closedItem.type} ปิดรับแล้ว`,
+          data: [closedItem],
+        });
       }
+    } else {
+      // มีลิมิต แต่ไม่พอแทง → แสดงยอดที่เหลือ
+      await conn.rollback();
+      return res.status(400).json({
+        status: false,
+        msg: `แทงเกินลิมิตที่เหลืออยู่ของเลข ${closedItem.number} ${closedItem.type} (${closedItem.remaining_limit} บาท)`,
+        data: [closedItem],
+      });
+    }
+  }
+
+  if (!canBuy) {
+    await conn.rollback();
+    return res.status(400).json({
+      status: false,
+      msg: `ไม่สามารถแทงเลข ${closedItem.number} ${closedItem.type} ได้`,
+      data: [closedItem],
+    });
+  }
+}
+
     }
 
     // อัปเดตเครดิตหลังแทง
