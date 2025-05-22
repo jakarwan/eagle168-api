@@ -11,10 +11,11 @@ async function updateTime() {
   try {
     const now = moment(new Date());
     const currentHour = now.hour();
-    const installmentDate =
-      currentHour < 6
-        ? now.clone().subtract(1, "day").format("YYYY-MM-DD")
-        : now.format("YYYY-MM-DD");
+    // const installmentDate =
+    //   currentHour < 6
+    //     ? now.clone().subtract(1, "day").format("YYYY-MM-DD")
+    //     : now.format("YYYY-MM-DD");
+    //     console.log(installmentDate,'installmentDate')
 
     // อัปเดต closing_time
     await connection.promise().query(
@@ -36,10 +37,9 @@ WHERE type_id != 2;
     await connection.promise().query(
       `
     UPDATE lotto_type
-    SET installment_date = ?
+    SET installment_date = CURDATE()
     WHERE type_id != 2
-  `,
-      [installmentDate]
+  `
     );
 
     // เปิดหวย
@@ -78,7 +78,7 @@ WHERE lt.type_id = 2;
 }
 
 // cron job reset lotto after 05.00
-cron.schedule("0 5 * * *", async () => {
+cron.schedule("14 1 * * *", async () => {
   await updateTime();
   await resetCloseNumber();
 });
@@ -451,7 +451,7 @@ async function getPrize() {
 
 //     const [lottoTypes] = await connection.promise().query(
 //       `
-//       SELECT * FROM lotto_type 
+//       SELECT * FROM lotto_type
 //       WHERE open = 0 AND active = 1 AND DATE(installment_date) = ?
 //     `,
 //       [prizeDate]
@@ -674,9 +674,9 @@ async function processLotto(lotto_type_id, prizeDate, el) {
 //     );
 
 //     const [winners] = await conn.query(
-//       `SELECT created_by, SUM(total) as total, MAX(poy_code) as poy_code 
-//        FROM prize_log 
-//        WHERE lotto_type_id = ? AND lotto_date = ? 
+//       `SELECT created_by, SUM(total) as total, MAX(poy_code) as poy_code
+//        FROM prize_log
+//        WHERE lotto_type_id = ? AND lotto_date = ?
 //        GROUP BY created_by`,
 //       [lotto_type_id, prizeDate]
 //     );
