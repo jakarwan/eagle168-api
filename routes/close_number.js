@@ -396,6 +396,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
         buy_limit4,
         buy_limit5,
         d,
+        buy_limit,
       ];
 
       if (allNumber === "1") {
@@ -426,7 +427,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
 
       const insertSql = `
         INSERT INTO close_number 
-        (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) 
+        (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto, remaining_limit) 
         VALUES ?
       `;
 
