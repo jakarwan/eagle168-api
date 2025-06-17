@@ -1160,76 +1160,143 @@ router.delete("/delete-award", verifyToken, (req, res) => {
   });
 });
 
-router.put("/update-creditbalacne", verifyToken, (req, res) => {
-  jwt.verify(req.token, "secretkey", (err, data) => {
-    const lotto_type_id = req.body.lotto_type_id;
-    const installment = req.body.installment;
-    if (!err) {
-      if (lotto_type_id != "" && installment != "") {
-        var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
-        connection.query(
-          sql,
-          [lotto_type_id],
-          (error, resultTypeLotto, fields) => {
-            if (resultTypeLotto.length > 0) {
-              // var date = moment(resultTypeLotto[0].closing_time).format(
-              //   "YYYY-MM-DD"
-              // );
-              var sql = `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`;
-              connection.query(
-                sql,
-                [installment, lotto_type_id],
-                (error, result, fields) => {
-                  let totalCredit = 0;
-                  result.forEach((item) => {
-                    connection.query(
-                      `SELECT credit_balance FROM member WHERE id = ?`,
-                      [item.created_by],
-                      (error, resultCredit, fields) => {
-                        if (resultCredit != "") {
-                          totalCredit =
-                            parseFloat(resultCredit[0].credit_balance) +
-                            parseFloat(item.total);
-                          connection.query(
-                            `UPDATE member SET credit_balance = ? WHERE id = ?`,
-                            [totalCredit, item.created_by],
-                            (error, result, fields) => {}
-                          );
-                          connection.query(
-                            `INSERT INTO credit_log (credit_previous,credit_after,created_by,lotto_type_id, note, installment, prize) VALUES (?,?,?,?,?,?,?)`,
-                            [
-                              resultCredit[0].credit_balance,
-                              totalCredit,
-                              item.created_by,
-                              lotto_type_id,
-                              `ถูกรางวัล ${item.total} บาท`,
-                              installment,
-                              item.total,
-                            ],
-                            (error, result, fields) => {}
-                          );
-                        }
-                      }
-                    );
-                  });
-                  return res
-                    .status(200)
-                    .send({ status: false, msg: "อัพเดทเครดิตสำเร็จ" });
-                }
-              );
-            }
-          }
-        );
-      } else {
-        return res
-          .status(400)
-          .send({ status: false, msg: "กรุณาส่ง lotto_type_id" });
-      }
-    } else {
-      res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+// router.put("/update-creditbalacne", verifyToken, (req, res) => {
+//   jwt.verify(req.token, "secretkey", (err, data) => {
+//     const lotto_type_id = req.body.lotto_type_id;
+//     const installment = req.body.installment;
+//     if (!err) {
+//       if (lotto_type_id != "" && installment != "") {
+//         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
+//         connection.query(
+//           sql,
+//           [lotto_type_id],
+//           (error, resultTypeLotto, fields) => {
+//             if (resultTypeLotto.length > 0) {
+//               // var date = moment(resultTypeLotto[0].closing_time).format(
+//               //   "YYYY-MM-DD"
+//               // );
+//               var sql = `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`;
+//               connection.query(
+//                 sql,
+//                 [installment, lotto_type_id],
+//                 (error, result, fields) => {
+//                   let totalCredit = 0;
+//                   result.forEach((item) => {
+//                     connection.query(
+//                       `SELECT credit_balance FROM member WHERE id = ?`,
+//                       [item.created_by],
+//                       (error, resultCredit, fields) => {
+//                         if (resultCredit != "") {
+//                           totalCredit =
+//                             parseFloat(resultCredit[0].credit_balance) +
+//                             parseFloat(item.total);
+//                           connection.query(
+//                             `UPDATE member SET credit_balance = ? WHERE id = ?`,
+//                             [totalCredit, item.created_by],
+//                             (error, result, fields) => {}
+//                           );
+//                           connection.query(
+//                             `INSERT INTO credit_log (credit_previous,credit_after,created_by,lotto_type_id, note, installment, prize) VALUES (?,?,?,?,?,?,?)`,
+//                             [
+//                               resultCredit[0].credit_balance,
+//                               totalCredit,
+//                               item.created_by,
+//                               lotto_type_id,
+//                               `ถูกรางวัล ${item.total} บาท`,
+//                               installment,
+//                               item.total,
+//                             ],
+//                             (error, result, fields) => {}
+//                           );
+//                         }
+//                       }
+//                     );
+//                   });
+//                   return res
+//                     .status(200)
+//                     .send({ status: false, msg: "อัพเดทเครดิตสำเร็จ" });
+//                 }
+//               );
+//             }
+//           }
+//         );
+//       } else {
+//         return res
+//           .status(400)
+//           .send({ status: false, msg: "กรุณาส่ง lotto_type_id" });
+//       }
+//     } else {
+//       res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//     }
+//   });
+// });
+router.put("/update-creditbalacne", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+    const { lotto_type_id, installment } = req.body;
+
+    if (!lotto_type_id || !installment) {
+      return res.status(400).json({ status: false, msg: "กรุณาส่งข้อมูลให้ครบ" });
     }
-  });
+
+    const [lottoTypeRows] = await connection
+      .promise()
+      .query("SELECT * FROM lotto_type WHERE lotto_type_id = ?", [lotto_type_id]);
+
+    if (lottoTypeRows.length === 0) {
+      return res.status(400).json({ status: false, msg: "ไม่พบประเภทหวยที่ต้องการอัปเดต" });
+    }
+
+    const [winners] = await connection
+      .promise()
+      .query(
+        `SELECT SUM(total * pay) as total, created_by 
+         FROM lotto_number 
+         WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' 
+         GROUP BY created_by`,
+        [installment, lotto_type_id]
+      );
+
+    for (const winner of winners) {
+      const [[member]] = await connection
+        .promise()
+        .query("SELECT credit_balance FROM member WHERE id = ?", [winner.created_by]);
+
+      const creditBefore = parseFloat(member.credit_balance || 0);
+      const prizeAmount = parseFloat(winner.total || 0);
+      const creditAfter = creditBefore + prizeAmount;
+
+      await connection
+        .promise()
+        .query("UPDATE member SET credit_balance = ? WHERE id = ?", [
+          creditAfter,
+          winner.created_by,
+        ]);
+
+      await connection
+        .promise()
+        .query(
+          `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, prize)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            creditBefore,
+            creditAfter,
+            winner.created_by,
+            lotto_type_id,
+            `ถูกรางวัล ${prizeAmount} บาท`,
+            installment,
+            prizeAmount,
+          ]
+        );
+    }
+
+    return res.status(200).json({ status: true, msg: "อัปเดตเครดิตสำเร็จแล้ว" });
+  } catch (err) {
+    console.error("update-creditbalance error:", err);
+    return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาด" });
+  }
 });
+
 
 router.post("/add-type", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
