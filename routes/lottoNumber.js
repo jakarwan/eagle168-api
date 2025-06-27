@@ -776,14 +776,90 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
 
     // insert lotto_number
     for (const item of number) {
-      const [pay] = lottoTypeOption.filter((el) => el.name === item.selected);
+      const closedItem = closeNumbers.find(
+        (el) => el.number === item.number && el.type === item.selected
+      );
+
+      let priceToBuy = parseFloat(item.price);
+      let series = closedItem?.series || 1;
+      let canBuy = false;
+      let pay = 0;
+
+      if (closedItem) {
+        while (series <= 5) {
+          const remainingLimit = parseFloat(closedItem.remaining_limit || 0);
+
+          if (remainingLimit >= priceToBuy) {
+            const newRemaining = remainingLimit - priceToBuy;
+
+            pay = parseFloat(
+              closedItem[series === 1 ? "pay" : `pay${series}`] || 0
+            );
+
+            await conn.query(
+              `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+              [newRemaining, series, closedItem.cn_id]
+            );
+
+            canBuy = true;
+            break;
+          } else if (remainingLimit === 0 && series < 5) {
+            const nextSeries = series + 1;
+            const nextLimit = parseFloat(
+              closedItem[`buy_limit${nextSeries}`] || 0
+            );
+
+            if (nextLimit > 0) {
+              await conn.query(
+                `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
+                [nextLimit, nextSeries, closedItem.cn_id]
+              );
+              closedItem.remaining_limit = nextLimit;
+              closedItem.series = nextSeries;
+              series = nextSeries;
+              continue;
+            } else {
+              await conn.rollback();
+              return res.status(400).json({
+                status: false,
+                msg: `เลข ${closedItem.number} ${closedItem.type} ปิดรับแล้ว`,
+                data: [closedItem],
+              });
+            }
+          } else {
+            await conn.rollback();
+            return res.status(400).json({
+              status: false,
+              msg: `แทงเกินลิมิตที่เหลืออยู่ของเลข ${closedItem.number} ${closedItem.type} (${closedItem.remaining_limit} บาท)`,
+              data: [closedItem],
+            });
+          }
+        }
+
+        if (!canBuy) {
+          await conn.rollback();
+          return res.status(400).json({
+            status: false,
+            msg: `ไม่สามารถแทงเลข ${closedItem.number} ${closedItem.type} ได้`,
+            data: [closedItem],
+          });
+        }
+      } else {
+        // fallback ใช้ pay จาก type_option (ถ้าไม่มี close_number)
+        const [option] = lottoTypeOption.filter(
+          (el) => el.name === item.selected
+        );
+        pay = option?.price || 0;
+      }
+
+      // insert lotto_number
       await conn.query(
         "INSERT INTO lotto_number (number, type_option, price, pay, discount, total, lotto_type_id, created_by, poy_code, status, installment_date, date_lotto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())",
         [
           item.number,
           item.selected,
           item.price,
-          pay.price,
+          pay,
           item.discount,
           parseFloat(item.price) - parseFloat(item.discount),
           lotto_type_id,
@@ -793,153 +869,6 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
           dateNow,
         ]
       );
-
-      // เพิ่มอัปเดต close_number
-      const closedItem = closeNumbers.find(
-        (el) => el.number === item.number && el.type === item.selected
-      );
-
-      // if (closedItem) {
-      //   let updateField = null;
-      //   let totalLimit = 0;
-
-      //   if (item.price <= closedItem.buy_limit) {
-      //     const series = closedItem.series || 1;
-      //     updateField = series === 1 ? "buy_limit" : `buy_limit${series}`;
-      //     totalLimit = closedItem.buy_limit - parseFloat(item.price);
-
-      //     await conn.query(
-      //       `UPDATE close_number SET ${updateField} = ? WHERE cn_id = ?`,
-      //       [totalLimit, closedItem.cn_id]
-      //     );
-      //   }
-      // }
-
-      // if (closedItem) {
-      //   const series = 1;
-      //   // console.log(closedItem, "closedItem");
-
-      //   // คำนวณ remaining_limit ใหม่
-      //   // const remainingField = "remaining_limit";
-      //   // const currentRemaining =
-      //   //   closedItem.remaining_limit || closedItem.buy_limit; // fallback
-      //   const newRemaining =
-      //     parseFloat(closedItem.remaining_limit) - parseFloat(item.price);
-
-      //   if (newRemaining === 0) {
-      //     series + 1;
-      //     newRemaining = closedItem[`buy_limit${series}`];
-      //   }
-
-      //   await conn.query(
-      //     `UPDATE close_number SET remaining_limit = ? WHERE cn_id = ?`,
-      //     [newRemaining, closedItem.cn_id]
-      //   );
-
-      //   // อัปเดต remaining_pay ด้วยราคาจ่าย ณ series นั้น ๆ
-      //   // const payField = series === 1 ? "pay" : `pay${series}`;
-      //   // const payValue = closedItem[payField] || 0;
-
-      //   await conn.query(
-      //     `UPDATE close_number SET remaining_pay = ? WHERE cn_id = ?`,
-      //     [series, closedItem.cn_id]
-      //   );
-      // }
-
-      // if (closedItem) {
-      //   let series = closedItem.series || 1;
-      //   let currentRemaining = parseFloat(closedItem.remaining_limit || 0);
-      //   let priceToBuy = parseFloat(item.price);
-      //   let newRemaining = currentRemaining - priceToBuy;
-
-      //   if (newRemaining >= 0) {
-      //     // ยังอยู่ใน series เดิม
-      //     // const payField =
-      //     //   series === 1 ? closedItem.pay : closedItem[`pay${series}`] || 0;
-
-      //     await conn.query(
-      //       `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-      //       [newRemaining, series, closedItem.cn_id]
-      //     );
-      //   } else {
-      //     // แทงเกิน series เดิม ต้องเลื่อนไป series ถัดไป
-      //     const nextSeries = (closedItem.series || 1) + 1;
-      //     const nextLimit = parseFloat(
-      //       closedItem[`buy_limit${nextSeries}`] || 0
-      //     );
-      //     const nextPay = parseFloat(closedItem[`pay${nextSeries}`] || 0);
-
-      //     const updatedRemaining = nextLimit - priceToBuy;
-
-      //     await conn.query(
-      //       `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-      //       [updatedRemaining, nextSeries, closedItem.cn_id]
-      //     );
-      //   }
-      // }
-
-      if (closedItem) {
-  let priceToBuy = parseFloat(item.price);
-  let series = closedItem.series || 1;
-  let canBuy = false;
-
-  while (series <= 5) {
-    const remainingLimit = parseFloat(closedItem.remaining_limit || 0);
-
-    if (remainingLimit >= priceToBuy) {
-      // ซื้อได้ใน series ปัจจุบัน
-      const newRemaining = remainingLimit - priceToBuy;
-      await conn.query(
-        `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-        [newRemaining, series, closedItem.cn_id]
-      );
-      canBuy = true;
-      break;
-    } else if (remainingLimit === 0 && series < 5) {
-      // ไปขั้นถัดไป
-      const nextSeries = series + 1;
-      const nextLimit = parseFloat(closedItem[`buy_limit${nextSeries}`] || 0);
-
-      if (nextLimit > 0) {
-        // มีลิมิตในขั้นถัดไป → reset remaining_limit แล้ววนต่อ
-        await conn.query(
-          `UPDATE close_number SET remaining_limit = ?, series = ? WHERE cn_id = ?`,
-          [nextLimit, nextSeries, closedItem.cn_id]
-        );
-        closedItem.remaining_limit = nextLimit;
-        closedItem.series = nextSeries;
-        series = nextSeries;
-        continue;
-      } else {
-        // ไม่มีลิมิตในขั้นถัดไป → ปิดรับ
-        await conn.rollback();
-        return res.status(400).json({
-          status: false,
-          msg: `เลข ${closedItem.number} ${closedItem.type} ปิดรับแล้ว`,
-          data: [closedItem],
-        });
-      }
-    } else {
-      // มีลิมิต แต่ไม่พอแทง → แสดงยอดที่เหลือ
-      await conn.rollback();
-      return res.status(400).json({
-        status: false,
-        msg: `แทงเกินลิมิตที่เหลืออยู่ของเลข ${closedItem.number} ${closedItem.type} (${closedItem.remaining_limit} บาท)`,
-        data: [closedItem],
-      });
-    }
-  }
-
-  if (!canBuy) {
-    await conn.rollback();
-    return res.status(400).json({
-      status: false,
-      msg: `ไม่สามารถแทงเลข ${closedItem.number} ${closedItem.type} ได้`,
-      data: [closedItem],
-    });
-  }
-}
-
     }
 
     // อัปเดตเครดิตหลังแทง
@@ -966,44 +895,6 @@ router.post("/add-lotto", verifyToken, async (req, res) => {
         billCode,
       ]
     );
-
-    // 🧡 Affiliate system (ถ้ามี refs_code)
-    // if (user.refs_code) {
-    //   const [[refUser]] = await conn.query(
-    //     "SELECT id, credit_balance FROM member WHERE refs_code = ?",
-    //     [user.refs_code]
-    //   );
-
-    //   if (refUser) {
-    //     // คิดคอมมิชชั่น (ตัวอย่างให้ 2%)
-    //     const affiliatePercent = 2; // เปอร์เซ็นต์
-    //     const affiliateBonus = (grandTotal * affiliatePercent) / 100;
-
-    //     const refCreditBefore = refUser.credit_balance;
-    //     const refCreditAfter = refUser.credit_balance + affiliateBonus;
-
-    //     await conn.query("UPDATE member SET credit_balance = ? WHERE id = ?", [
-    //       refCreditAfter,
-    //       refUser.id,
-    //     ]);
-
-    //     // บันทึกเข้า credit_log ว่าได้ค่าคอม
-    //     await conn.query(
-    //       `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code)
-    //        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    //       [
-    //         refCreditBefore,
-    //         refCreditAfter,
-    //         refUser.id,
-    //         lotto_type_id,
-    //         `ค่าคอมจากการแทงหวยของ ${user.phone}`,
-    //         dateNow,
-    //         user.refs_code,
-    //         billCode,
-    //       ]
-    //     );
-    //   }
-    // }
 
     await conn.commit();
 
@@ -1223,4 +1114,300 @@ router.post("/cancel-lotto/admin", verifyToken, (req, res) => {
     }
   });
 });
+
+router.post("/add-lotto-agent", verifyToken, async (req, res) => {
+  const conn = await connection.promise().getConnection();
+  await conn.beginTransaction();
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+    const { number, note, lotto_type_id, promotion_id } = req.body;
+
+    if (!number || !lotto_type_id) {
+      return res
+        .status(400)
+        .json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
+    }
+
+    // Query promotion data
+    let promotionData = null;
+    if (promotion_id) {
+      const [[promotion]] = await conn.query(
+        "SELECT * FROM promotions WHERE promotion_id = ? AND active = 1 LIMIT 1",
+        [promotion_id]
+      );
+      promotionData = promotion;
+    }
+
+    const [[lottoType]] = await conn.query(
+      "SELECT * FROM lotto_type WHERE lotto_type_id = ? AND open = 1 AND active = 1",
+      [lotto_type_id]
+    );
+
+    if (!lottoType) {
+      await conn.rollback();
+      return res.status(400).json({ status: false, msg: "หวยนี้ปิดรับแทง" });
+    }
+
+    const [lottoTypeOption] = await conn.query(
+      "SELECT * FROM type_options WHERE type_id = ?",
+      [lottoType.type_id]
+    );
+
+    // const dateNow = moment(lottoType.installment_date).format("YYYY-MM-DD");
+    const installmentDate =
+      moment(lottoType.closing_time).format("HH:mm:ss") < "06:00:00"
+        ? moment(lottoType.closing_time)
+            .clone()
+            .subtract(1, "day")
+            .format("YYYY-MM-DD")
+        : moment(lottoType.closing_time).format("YYYY-MM-DD");
+    console.log(installmentDate, "installmentDate");
+
+    const [closeNumbers] = await conn.query(
+      `SELECT cn_id, number, type, 
+      remaining_limit,
+      series,
+      pay,
+      pay2,
+      pay3,
+      pay4,
+      pay5,
+      buy_limit,
+      buy_limit2,
+      buy_limit3,
+      buy_limit4,
+      buy_limit5
+      FROM close_number 
+      WHERE lotto_type_id = ?`,
+      [lotto_type_id]
+    );
+
+    let totalPrice = 0;
+    let totalDiscountAmount = 0;
+    let grandTotal = 0;
+    const arrClose = [];
+    const processedNumbers = [];
+
+    for (const item of number) {
+      // totalPrice += parseFloat(item.price);
+      // totalDiscountPrice += parseFloat(item.discount);
+      // grandTotal += parseFloat(item.price) - parseFloat(item.discount);
+
+      const itemPrice = parseFloat(item.price);
+
+      // คำนวณส่วนลดตามประเภทการแทง
+      let discountPercent = 0;
+      let discountAmount = 0;
+
+      if (promotionData) {
+        // กำหนดเปอร์เซ็นต์ส่วนลดตามประเภทการแทง
+        switch (item.selected) {
+          case "3 ตัวบน":
+            discountPercent = parseFloat(promotionData.discount_3top || 0);
+            break;
+          case "3 ตัวโต๊ด":
+            discountPercent = parseFloat(promotionData.discount_3tod || 0);
+            break;
+          case "2 ตัวบน":
+            discountPercent = parseFloat(promotionData.discount_2top || 0);
+            break;
+          case "2 ตัวล่าง":
+            discountPercent = parseFloat(promotionData.discount_2bottom || 0);
+            break;
+          case "วิ่งบน":
+            discountPercent = parseFloat(promotionData.discount_runtop || 0);
+            break;
+          case "วิ่งล่าง":
+            discountPercent = parseFloat(promotionData.discount_runbottom || 0);
+            break;
+          default:
+            discountPercent = 0;
+        }
+
+        // คำนวณจำนวนเงินส่วนลด
+        discountAmount = (itemPrice * discountPercent) / 100;
+      }
+
+      const priceAfterDiscount = itemPrice - discountAmount;
+
+      totalPrice += itemPrice;
+      totalDiscountAmount += discountAmount;
+      console.log(totalDiscountAmount, "totalDiscountAmount");
+      grandTotal += priceAfterDiscount;
+
+      // เก็บข้อมูลสำหรับ insert ภายหลัง
+      processedNumbers.push({
+        ...item,
+        originalPrice: itemPrice,
+        discountPercent: discountPercent,
+        discountAmount: discountAmount,
+        finalPrice: priceAfterDiscount,
+      });
+    }
+
+    const [[user]] = await conn.query(
+      "SELECT credit_balance, is_active, refs_code, phone, max_limit, max_play FROM member WHERE id = ?",
+      [decoded.user.id]
+    );
+
+    if (user.is_active == 0) {
+      await conn.rollback();
+      return res
+        .status(400)
+        .json({ status: false, msg: "คุณถูกแบนจากการใช้งาน" });
+    }
+
+    if (user.credit_balance < grandTotal) {
+      await conn.rollback();
+      return res.status(400).json({ status: false, msg: "เครดิตไม่เพียงพอ" });
+    }
+
+    if (grandTotal > user.max_limit) {
+      await conn.rollback();
+      return res.status(400).json({
+        status: false,
+        msg: `ยอดแทงต้องไม่เกิน ${user.max_limit} บาท`,
+      });
+    }
+
+    if (user.max_play <= 0) {
+      await conn.rollback();
+      return res
+        .status(400)
+        .json({ status: false, msg: `จำนวนครั้งในการแทงครบแล้ว` });
+    }
+
+    // update max_play
+    await conn.query("UPDATE member SET max_play = max_play - 1 WHERE id = ?", [
+      decoded.user.id,
+    ]);
+
+    // สร้าง bill_code แบบ timestamp ป้องกันซ้ำ
+    // const billCode = `BILL${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const billCode = `BILL${Math.floor(
+      10000000 + Math.random() * 90000000
+    ).toString()}`;
+
+    const [insertPoyResult] = await conn.query(
+      "INSERT INTO poy (poy_code, price, discount, total, note, lotto_type_id, created_by, lotto_total, installment_date, date_lotto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())",
+      [
+        billCode,
+        totalPrice,
+        totalDiscountAmount,
+        grandTotal,
+        note,
+        lotto_type_id,
+        decoded.user.id,
+        number.length,
+        installmentDate,
+      ]
+    );
+
+    // insert lotto_number
+    for (const item of processedNumbers) {
+      const [pay] = lottoTypeOption.filter((el) => el.name === item.selected);
+
+      // กำหนดค่า pay rate ตามเงื่อนไข
+      let payRate = pay.price; // ค่าเริ่มต้นจาก type_options
+
+      // ถ้ามี promotion ให้ใช้ pay rate จาก promotion แทน
+      if (promotionData) {
+        switch (item.selected) {
+          case "3 ตัวบน":
+            payRate = parseFloat(promotionData.pay_3top || pay.price);
+            break;
+          case "3 ตัวโต๊ด":
+            payRate = parseFloat(promotionData.pay_3tod || pay.price);
+            break;
+          case "2 ตัวบน":
+            payRate = parseFloat(promotionData.pay_2top || pay.price);
+            break;
+          case "2 ตัวล่าง":
+            payRate = parseFloat(promotionData.pay_2bottom || pay.price);
+            break;
+          case "วิ่งบน":
+            payRate = parseFloat(promotionData.pay_runtop || pay.price);
+            break;
+          case "วิ่งล่าง":
+            payRate = parseFloat(promotionData.pay_runbottom || pay.price);
+            break;
+          default:
+            payRate = pay.price; // ใช้ค่าเริ่มต้นถ้าไม่มีในโปรโมชั่น
+        }
+      }
+
+      await conn.query(
+        `INSERT INTO lotto_number (
+          number, 
+          type_option, 
+          price, 
+          pay, 
+          discount, 
+          discount_percent,
+          total, 
+          lotto_type_id, 
+          created_by, 
+          poy_code, 
+          status, 
+          installment_date, 
+          date_lotto,
+          promotion_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?)`,
+        [
+          item.number,
+          item.selected,
+          item.originalPrice,
+          payRate, // ใช้ payRate ที่คำนวณแล้ว
+          item.discountAmount,
+          item.discountPercent,
+          item.finalPrice,
+          lotto_type_id,
+          decoded.user.id,
+          billCode,
+          "wait",
+          installmentDate,
+          promotion_id || null,
+        ]
+      );
+    }
+
+    // อัปเดตเครดิตหลังแทง
+    const creditBefore = user.credit_balance;
+    const creditAfter = user.credit_balance - grandTotal;
+
+    await conn.query("UPDATE member SET credit_balance = ? WHERE id = ?", [
+      creditAfter,
+      decoded.user.id,
+    ]);
+
+    // เพิ่มเข้า credit_log
+    await conn.query(
+      `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, ref_code, poy_code) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        creditBefore,
+        creditAfter,
+        decoded.user.id,
+        lotto_type_id,
+        `แทงหวย ${grandTotal} บาท (${billCode})`,
+        installmentDate,
+        "",
+        billCode,
+      ]
+    );
+
+    await conn.commit();
+
+    return res
+      .status(200)
+      .json({ status: true, msg: "แทงหวยสำเร็จ", bill_code: billCode });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error(err);
+    return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาด" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 module.exports = router;
