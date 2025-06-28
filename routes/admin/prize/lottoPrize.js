@@ -162,8 +162,7 @@ router.get("/turnover", verifyToken, (req, res) => {
         search,
         lotto_type_id,
         startDate,
-        endDate,
-        status, // ใช้สำหรับ HAVING sum_prize > 0
+        endDate
       } = req.query;
 
       if (!startDate || !endDate) {
@@ -174,8 +173,9 @@ router.get("/turnover", verifyToken, (req, res) => {
 
       let sql = `
         SELECT 
-            SUM(p.total) as total
-        FROM poy as p 
+          SUM(p.total) AS turnover,
+          SUM(CASE WHEN p.status_result = 0 THEN p.total ELSE 0 END) AS outstanding
+        FROM poy AS p
         LEFT JOIN member AS mb ON p.created_by = mb.id
         WHERE p.date_lotto >= ? 
           AND p.date_lotto < DATE_ADD(?, INTERVAL 1 DAY)
@@ -184,14 +184,14 @@ router.get("/turnover", verifyToken, (req, res) => {
       const params = [startDate, endDate];
 
       if (search) {
-        sql +=
-          " AND (mb.name LIKE CONCAT('%', ?, '%') OR p.poy_code LIKE CONCAT('%', ?, '%') OR mb.phone LIKE CONCAT('%', ?, '%')) ";
+        sql += `
+          AND (
+            mb.name LIKE CONCAT('%', ?, '%') 
+            OR p.poy_code LIKE CONCAT('%', ?, '%') 
+            OR mb.phone LIKE CONCAT('%', ?, '%')
+          )
+        `;
         params.push(search, search, search);
-      }
-
-      if (status === "0" || status === "1") {
-        sql += " AND p.status_result = ? ";
-        params.push(status);
       }
 
       if (lotto_type_id) {
@@ -207,14 +207,22 @@ router.get("/turnover", verifyToken, (req, res) => {
             .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
         }
 
-        // const data = paginatedResults(req, res, result);
-        return res.status(200).send({ status: true, data: result });
+        return res.status(200).send({
+          status: true,
+          data: {
+            turnover: parseFloat(result[0].turnover || 0),
+            outstanding: parseFloat(result[0].outstanding || 0),
+          },
+        });
       });
     } else {
-      return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+      return res
+        .status(403)
+        .send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
     }
   });
 });
+
 
 router.get("/detail-prize-result", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
