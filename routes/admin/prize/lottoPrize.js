@@ -111,8 +111,9 @@ router.get("/prize-result", verifyToken, (req, res) => {
       }
 
       if (search) {
-        sql += " AND (mb.name LIKE CONCAT('%', ?, '%') OR p.poy_code LIKE CONCAT('%', ?, '%')) ";
-        params.push(search, search);
+        sql +=
+          " AND (mb.name LIKE CONCAT('%', ?, '%') OR p.poy_code LIKE CONCAT('%', ?, '%') OR mb.phone LIKE CONCAT('%', ?, '%')) ";
+        params.push(search, search, search);
       }
 
       sql += `
@@ -140,7 +141,9 @@ router.get("/prize-result", verifyToken, (req, res) => {
       connection.query(sql, params, (error, result) => {
         if (error) {
           console.error("SQL Error:", error);
-          return res.status(500).send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+          return res
+            .status(500)
+            .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
         }
 
         const data = paginatedResults(req, res, result);
@@ -152,6 +155,66 @@ router.get("/prize-result", verifyToken, (req, res) => {
   });
 });
 
+router.get("/turnover", verifyToken, (req, res) => {
+  jwt.verify(req.token, "secretkey", (err, data) => {
+    if (!err) {
+      const {
+        search,
+        lotto_type_id,
+        startDate,
+        endDate,
+        status, // ใช้สำหรับ HAVING sum_prize > 0
+      } = req.query;
+
+      if (!startDate || !endDate) {
+        return res
+          .status(400)
+          .send({ status: false, msg: "กรุณาส่ง startDate, endDate" });
+      }
+
+      let sql = `
+        SELECT 
+            SUM(p.total) as total
+        FROM poy as p 
+        LEFT JOIN member AS mb ON p.created_by = mb.id
+        WHERE p.date_lotto >= ? 
+          AND p.date_lotto < DATE_ADD(?, INTERVAL 1 DAY)
+      `;
+
+      const params = [startDate, endDate];
+
+      if (search) {
+        sql +=
+          " AND (mb.name LIKE CONCAT('%', ?, '%') OR p.poy_code LIKE CONCAT('%', ?, '%') OR mb.phone LIKE CONCAT('%', ?, '%')) ";
+        params.push(search, search, search);
+      }
+
+      if (status === "0" || status === "1") {
+        sql += " AND p.status_result = ? ";
+        params.push(status);
+      }
+
+      if (lotto_type_id) {
+        sql += " AND p.lotto_type_id = ? ";
+        params.push(lotto_type_id);
+      }
+
+      connection.query(sql, params, (error, result) => {
+        if (error) {
+          console.error("SQL Error:", error);
+          return res
+            .status(500)
+            .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+        }
+
+        // const data = paginatedResults(req, res, result);
+        return res.status(200).send({ status: true, data: result });
+      });
+    } else {
+      return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+  });
+});
 
 router.get("/detail-prize-result", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
