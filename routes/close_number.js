@@ -88,7 +88,7 @@ router.get("/", verifyToken, (req, res) => {
       var lotto_type_id = req.query.lotto_type_id;
       if (lotto_type_id != null) {
         var sql =
-          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
+          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN series = 1 THEN pay WHEN series = 2 THEN pay2 WHEN series = 3 THEN pay3 WHEN series = 4 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
           return res.status(200).send({ status: true, data: result });
         });
