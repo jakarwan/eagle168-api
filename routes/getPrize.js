@@ -897,7 +897,7 @@ router.get("/lotto-results", verifyToken, async (req, res) => {
       `SELECT ln.*, mb.credit_balance FROM lotto_number as ln 
        JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id 
        JOIN member as mb ON ln.created_by = mb.id 
-       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.date_lotto LIKE ?`,
+       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date LIKE ?`,
       [lotto_type_id, `%${installment}%`]
     );
 
@@ -940,7 +940,7 @@ router.get("/lotto-results", verifyToken, async (req, res) => {
     await connection
       .promise()
       .query(
-        `UPDATE poy SET status_result = 1 WHERE lotto_type_id = ? AND date_lotto = ?`,
+        `UPDATE poy SET status_result = 1 WHERE lotto_type_id = ? AND installment_date = ?`,
         [lotto_type_id, installment]
       );
     await connection
