@@ -53,7 +53,7 @@ router.get("/", verifyToken, (req, res) => {
 });
 
 router.get("/prize-result", verifyToken, (req, res) => {
-  jwt.verify(req.token, "secretkey", (err, user) => {
+  jwt.verify(req.token, "secretkey", (err, data) => {
     if (!err) {
       const {
         search,
@@ -147,7 +147,7 @@ router.get("/prize-result", verifyToken, (req, res) => {
         }
 
         const data = paginatedResults(req, res, result);
-        return res.status(200).send({ status: true, data: user.user.id !== 1131 ? data: [] });
+        return res.status(200).send({ status: true, data });
       });
     } else {
       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
@@ -206,6 +206,7 @@ router.get("/turnover", verifyToken, (req, res) => {
             .status(500)
             .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
         }
+        console.log(result,'result')
 
         return res.status(200).send({
           status: true,
