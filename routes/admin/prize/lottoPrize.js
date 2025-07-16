@@ -301,7 +301,7 @@ router.post("/add-prize", verifyToken, (req, res) => {
                         sql,
                         [lotto_type_id],
                         (error, resultChkPrizeTime, fields) => {
-                          if (resultChkPrizeTime.length > 0) {
+                          // if (resultChkPrizeTime.length > 0) {
                             var sql =
                               "INSERT INTO prize (lotto_type_id, prize6digit, prize3bottom, type3top, prize3top, type2bottom, prize2bottom, prize_time, created_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
                             connection.query(
@@ -325,12 +325,12 @@ router.post("/add-prize", verifyToken, (req, res) => {
                                 });
                               }
                             );
-                          } else {
-                            return res.status(400).send({
-                              status: false,
-                              msg: "หวยนี้ยังไม่ถึงเวลาออกผล",
-                            });
-                          }
+                          // } else {
+                          //   return res.status(400).send({
+                          //     status: false,
+                          //     msg: "หวยนี้ยังไม่ถึงเวลาออกผล",
+                          //   });
+                          // }
                         }
                       );
                     } else {
