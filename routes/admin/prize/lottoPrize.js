@@ -82,6 +82,8 @@ router.get("/prize-result", verifyToken, (req, res) => {
             p.discount AS sum_discount, 
             p.price AS sum_total, 
             p.note, 
+            p.installment_date, 
+            p.date_lotto, 
             lt.lotto_type_name, 
             mb.name, 
             mb.familyName, 
@@ -127,6 +129,8 @@ router.get("/prize-result", verifyToken, (req, res) => {
             p.discount, 
             p.price, 
             p.note, 
+            p.installment_date, 
+            p.date_lotto, 
             lt.lotto_type_name, 
             mb.name, 
             mb.familyName
